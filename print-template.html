@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <base target="_top">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      color: #1e293b;
+      background: #f0f4f8;
+      line-height: 1.5;
+    }
+
+    .print-page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 20px auto;
+      padding: 20mm 18mm;
+      background: white;
+      box-shadow: 0 4px 20px rgba(0,0,0,.1);
+    }
+
+    /* ─── Header ─── */
+    .doc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 3px solid #2563eb;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .company-info h1 {
+      font-size: 22px;
+      color: #2563eb;
+      margin-bottom: 4px;
+    }
+    .company-info p {
+      font-size: 11px;
+      color: #64748b;
+    }
+    .doc-title-box {
+      text-align: right;
+    }
+    .doc-title-box h2 {
+      font-size: 24px;
+      color: #2563eb;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    .doc-title-box .so-number {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 4px;
+    }
+    .doc-title-box .so-date {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    /* ─── Customer Info ─── */
+    .info-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+    .info-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .info-box h3 {
+      font-size: 12px;
+      color: #2563eb;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 6px;
+    }
+    .info-row {
+      display: flex;
+      margin-bottom: 3px;
+    }
+    .info-row .lbl {
+      width: 110px;
+      color: #64748b;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .info-row .val {
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    /* ─── Items Table ─── */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+    .items-table thead th {
+      background: #2563eb;
+      color: white;
+      padding: 8px 10px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 11px;
+    }
+    .items-table thead th:first-child { border-radius: 6px 0 0 0; }
+    .items-table thead th:last-child  { border-radius: 0 6px 0 0; }
+    .items-table tbody td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: center;
+    }
+    .items-table tbody td:nth-child(2),
+    .items-table tbody td:nth-child(3) {
+      text-align: left;
+    }
+    .items-table tbody tr:nth-child(even) { background: #f8fafc; }
+    .items-table tbody tr:last-child td { border-bottom: 2px solid #2563eb; }
+
+    /* ─── Summary ─── */
+    .summary-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 24px;
+    }
+    .summary-tbl {
+      min-width: 300px;
+      border-collapse: collapse;
+    }
+    .summary-tbl td {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+    .summary-tbl .lbl { text-align: right; color: #64748b; }
+    .summary-tbl .val { text-align: right; font-weight: 700; }
+    .summary-tbl tr.grand {
+      border-top: 2px solid #2563eb;
+    }
+    .summary-tbl tr.grand .val {
+      font-size: 18px;
+      color: #2563eb;
+    }
+
+    /* ─── Remarks ─── */
+    .remarks-section {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 30px;
+      font-size: 12px;
+    }
+    .remarks-section h4 {
+      font-size: 11px;
+      color: #2563eb;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* ─── Signatures ─── */
+    .signatures {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 24px;
+      margin-top: 40px;
+      text-align: center;
+      font-size: 12px;
+    }
+    .sig-box {
+      padding-top: 10px;
+    }
+    .sig-box .sig-img {
+      height: 60px;
+      margin-bottom: 4px;
+    }
+    .sig-box .sig-line {
+      border-top: 1px solid #1e293b;
+      width: 160px;
+      margin: 0 auto 4px;
+    }
+    .sig-box .sig-name {
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .sig-box .sig-title {
+      color: #64748b;
+      font-size: 11px;
+    }
+    .sig-box .sig-date {
+      color: #94a3b8;
+      font-size: 10px;
+      margin-top: 2px;
+    }
+
+    /* ─── Print Styles ─── */
+    @media print {
+      body { background: white; }
+      .print-page {
+        margin: 0;
+        padding: 15mm;
+        box-shadow: none;
+        min-height: auto;
+      }
+      .no-print { display: none !important; }
+    }
+
+    /* ─── Print Button Bar ─── */
+    .print-bar {
+      text-align: center;
+      padding: 20px;
+    }
+    .print-bar button {
+      font-family: 'Sarabun', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 12px 32px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 0 8px;
+    }
+    .btn-print {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+    }
+    .btn-close-print {
+      background: #e2e8f0;
+      color: #64748b;
+    }
+
+    .loading-msg {
+      text-align: center;
+      padding: 60px;
+      font-size: 18px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Print buttons -->
+  <div class="print-bar no-print" id="printBar" style="display:none;">
+    <button class="btn-print" onclick="window.print()">🖨️ พิมพ์เอกสาร</button>
+    <button class="btn-close-print" onclick="window.close()">✕ ปิดหน้านี้</button>
+  </div>
+
+  <div id="loadingMsg" class="loading-msg">⏳ กำลังโหลดข้อมูลใบสั่งขาย...</div>
+
+  <!-- Print Page (A4) -->
+  <div class="print-page" id="printPage" style="display:none;">
+
+    <!-- Header -->
+    <div class="doc-header">
+      <div class="company-info">
+        <h1>บริษัท ตัวอย่าง จำกัด</h1>
+        <p>123/45 ถ.สุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพฯ 10110</p>
+        <p>โทร: 02-xxx-xxxx | Email: info@example.com</p>
+        <p>เลขผู้เสียภาษี: 0-1234-56789-01-2</p>
+      </div>
+      <div class="doc-title-box">
+        <h2>ใบสั่งขาย</h2>
+        <div>SALE ORDER</div>
+        <div class="so-number" id="printSONumber">-</div>
+        <div class="so-date" id="printSODate">-</div>
+      </div>
+    </div>
+
+    <!-- Customer & Delivery Info -->
+    <div class="info-section">
+      <div class="info-box">
+        <h3>ข้อมูลลูกค้า</h3>
+        <div class="info-row"><span class="lbl">รหัสลูกค้า:</span><span class="val" id="pCustId">-</span></div>
+        <div class="info-row"><span class="lbl">ชื่อ:</span><span class="val" id="pCustName">-</span></div>
+        <div class="info-row"><span class="lbl">Tax ID:</span><span class="val" id="pTaxId">-</span></div>
+        <div class="info-row"><span class="lbl">โทร:</span><span class="val" id="pPhone">-</span></div>
+        <div class="info-row"><span class="lbl">Email:</span><span class="val" id="pEmail">-</span></div>
+        <div class="info-row"><span class="lbl">ผู้ติดต่อ:</span><span class="val" id="pContact">-</span></div>
+      </div>
+      <div class="info-box">
+        <h3>ที่อยู่ & การจัดส่ง</h3>
+        <div class="info-row"><span class="lbl">ที่อยู่ออกบิล:</span><span class="val" id="pBillAddr">-</span></div>
+        <div class="info-row"><span class="lbl">ที่อยู่จัดส่ง:</span><span class="val" id="pShipAddr">-</span></div>
+        <div class="info-row"><span class="lbl">เงื่อนไขชำระ:</span><span class="val" id="pPayment">-</span></div>
+        <div class="info-row"><span class="lbl">วิธีจัดส่ง:</span><span class="val" id="pDelivery">-</span></div>
+        <div class="info-row"><span class="lbl">ขนส่ง:</span><span class="val" id="pCourier">-</span></div>
+        <div class="info-row"><span class="lbl">วันส่งมอบ:</span><span class="val" id="pDelivDate">-</span></div>
+      </div>
+    </div>
+
+    <!-- Items Table -->
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th style="width:35px;">#</th>
+          <th style="width:100px;">รหัสสินค้า</th>
+          <th>ชื่อสินค้า</th>
+          <th style="width:50px;">จำนวน</th>
+          <th style="width:50px;">หน่วย</th>
+          <th style="width:80px;">ราคา/หน่วย</th>
+          <th style="width:70px;">ส่วนลด</th>
+          <th style="width:90px;">รวม</th>
+          <th>หมายเหตุ</th>
+        </tr>
+      </thead>
+      <tbody id="printItemsBody">
+        <!-- Dynamic -->
+      </tbody>
+    </table>
+
+    <!-- Summary -->
+    <div class="summary-section">
+      <table class="summary-tbl">
+        <tr>
+          <td class="lbl">ราคาสุทธิ (ก่อน VAT)</td>
+          <td class="val" id="pSubtotal">0.00</td>
+          <td>บาท</td>
+        </tr>
+        <tr>
+          <td class="lbl">ภาษีมูลค่าเพิ่ม 3%</td>
+          <td class="val" id="pVat">0.00</td>
+          <td>บาท</td>
+        </tr>
+        <tr class="grand">
+          <td class="lbl" style="font-weight:700;">จำนวนเงินรวมทั้งสิ้น</td>
+          <td class="val" id="pGrandTotal">0.00</td>
+          <td style="font-weight:700;">บาท</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Remarks -->
+    <div class="remarks-section" id="remarksSection" style="display:none;">
+      <h4>หมายเหตุ / โปรโมชั่น</h4>
+      <p id="pRemarks"></p>
+    </div>
+
+    <!-- Signatures -->
+    <div class="signatures">
+      <div class="sig-box">
+        <img class="sig-img" id="pSalesSigImg" src="" alt="" style="display:none;">
+        <div class="sig-line"></div>
+        <div class="sig-name" id="pSalesName">พนักงานขาย</div>
+        <div class="sig-title">ผู้จัดทำ / พนักงานขาย</div>
+        <div class="sig-date" id="pSalesDate"></div>
+      </div>
+      <div class="sig-box">
+        <!-- Fixed manager signature - replace URL with actual -->
+        <img class="sig-img" src="" alt="" style="display:none;" id="pManagerSigImg">
+        <div class="sig-line"></div>
+        <div class="sig-name">ผู้จัดการตลาด</div>
+        <div class="sig-title">ผู้อนุมัติ</div>
+        <div class="sig-date" id="pManagerDate"></div>
+      </div>
+      <div class="sig-box">
+        <div style="height:60px;"></div>
+        <div class="sig-line"></div>
+        <div class="sig-name">ลูกค้า</div>
+        <div class="sig-title">ผู้สั่งซื้อ</div>
+        <div class="sig-date"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ─── Load SO data from URL parameter ────────────
+    (async function() {
+      var soNumber = getUrlParam('so');
+      if (!soNumber) {
+        document.getElementById('loadingMsg').textContent = '❌ ไม่พบเลขที่ SO ใน URL';
+        return;
+      }
+
+      try {
+        const result = await API.getSaleOrderForPrint(soNumber);
+        if (!result.success) {
+          document.getElementById('loadingMsg').textContent = '❌ ' + (result.error || 'เกิดข้อผิดพลาด');
+          return;
+        }
+        renderPrintData(result);
+      } catch (err) {
+        document.getElementById('loadingMsg').textContent = '❌ ' + err.message;
+      }
+    })();
+
+    function getUrlParam(name) {
+      var url = window.location.href;
+      name = name.replace(/[\[\]]/g, '\\$&');
+      var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)');
+      var results = regex.exec(url);
+      if (!results) return null;
+      if (!results[2]) return '';
+      return decodeURIComponent(results[2].replace(/\+/g, ' '));
+    }
+
+    function formatNum(n) {
+      var num = parseFloat(n) || 0;
+      return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function formatDate(dateVal) {
+      if (!dateVal) return '-';
+      var d = new Date(dateVal);
+      if (isNaN(d.getTime())) return String(dateVal);
+      var dd = ('0' + d.getDate()).slice(-2);
+      var mm = ('0' + (d.getMonth() + 1)).slice(-2);
+      var yyyy = d.getFullYear() + 543; // พ.ศ.
+      return dd + '/' + mm + '/' + yyyy;
+    }
+
+    function renderPrintData(result) {
+      var h = result.header;
+      var items = result.details;
+      var sp = result.salesperson;
+
+      // Header
+      document.getElementById('printSONumber').textContent = h.SO_Number || '';
+      document.getElementById('printSODate').textContent = 'วันที่: ' + formatDate(h.SO_Date);
+
+      // Customer
+      document.getElementById('pCustId').textContent   = h.Customer_ID || '-';
+      document.getElementById('pCustName').textContent  = h.Customer_Name || '-';
+      document.getElementById('pTaxId').textContent     = h.Tax_ID || '-';
+      document.getElementById('pPhone').textContent     = h.Phone || '-';
+      document.getElementById('pEmail').textContent     = h.Email || '-';
+      document.getElementById('pContact').textContent   = h.Contact_Person || '-';
+
+      // Address & Delivery
+      document.getElementById('pBillAddr').textContent   = h.Billing_Address || '-';
+      document.getElementById('pShipAddr').textContent   = h.Shipping_Address || '-';
+      document.getElementById('pPayment').textContent    = h.Payment_Term || '-';
+      document.getElementById('pDelivery').textContent   = h.Delivery_Method || '-';
+      document.getElementById('pCourier').textContent    = h.Courier || '-';
+      document.getElementById('pDelivDate').textContent  = formatDate(h.Delivery_Date);
+
+      // Items
+      var tbody = document.getElementById('printItemsBody');
+      tbody.innerHTML = '';
+      items.forEach(function(item, idx) {
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + (item.Item_No || idx + 1) + '</td>' +
+          '<td>' + (item.Product_Code || '') + '</td>' +
+          '<td>' + (item.Product_Name || '') + '</td>' +
+          '<td>' + (item.Qty || 0) + '</td>' +
+          '<td>' + (item.Unit || '') + '</td>' +
+          '<td style="text-align:right;">' + formatNum(item.Unit_Price) + '</td>' +
+          '<td style="text-align:right;">' + formatNum(item.Discount) + '</td>' +
+          '<td style="text-align:right;">' + formatNum(item.Total_Price) + '</td>' +
+          '<td>' + (item.Item_Remark || '') + '</td>';
+        tbody.appendChild(tr);
+      });
+
+      // Summary
+      document.getElementById('pSubtotal').textContent   = formatNum(h.Total_Exempted_VAT);
+      document.getElementById('pVat').textContent        = formatNum(h.VAT_Amount);
+      document.getElementById('pGrandTotal').textContent = formatNum(h.Grand_Total);
+
+      // Remarks
+      if (h.Remarks) {
+        document.getElementById('remarksSection').style.display = 'block';
+        document.getElementById('pRemarks').textContent = h.Remarks;
+      }
+
+      // Salesperson signature (Base64 WebP)
+      if (sp) {
+        document.getElementById('pSalesName').textContent = sp.Sales_Name || 'พนักงานขาย';
+        if (sp.Signature_Base64) {
+          var sigImg = document.getElementById('pSalesSigImg');
+          // Support both raw base64 and full data URI
+          if (sp.Signature_Base64.indexOf('data:') === 0) {
+            sigImg.src = sp.Signature_Base64;
+          } else {
+            sigImg.src = 'data:image/webp;base64,' + sp.Signature_Base64;
+          }
+          sigImg.style.display = 'block';
+        }
+      }
+      document.getElementById('pSalesDate').textContent = 'วันที่ ' + formatDate(h.SO_Date);
+      document.getElementById('pManagerDate').textContent = 'วันที่ ' + formatDate(h.SO_Date);
+
+      // Show page
+      document.getElementById('loadingMsg').style.display = 'none';
+      document.getElementById('printPage').style.display = 'block';
+      document.getElementById('printBar').style.display = 'block';
+    }
+  </script>
+  <script src="js/api.js"></script>
+</body>
+</html>

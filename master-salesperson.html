@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบออกใบสั่งขาย (Sale Order) - พนักงานขาย</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .nav-bar { display:flex; gap:8px; padding:12px 24px; background:#f1f5f9; border-bottom:1px solid #e2e8f0; flex-wrap:wrap; }
+    .nav-bar a { padding:8px 16px; border-radius:8px; text-decoration:none; font-weight:600; font-size:13px; color:#64748b; transition:all .2s; }
+    .nav-bar a:hover { background:#dbeafe; color:#2563eb; }
+    .nav-bar a.active { background:#2563eb; color:#fff; }
+    .data-table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+    .data-table thead th { background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; padding:12px; text-align:left; font-weight:600; font-size:12px; position:sticky; top:0; }
+    .data-table thead th:first-child { border-radius:8px 0 0 0; }
+    .data-table thead th:last-child { border-radius:0 8px 0 0; }
+    .data-table tbody td { padding:10px 12px; border-bottom:1px solid #e2e8f0; vertical-align:middle; }
+    .data-table tbody tr:hover { background:#f8fafc; }
+    .sig-preview { height:40px; border-radius:4px; }
+    .btn-edit { padding:6px 12px; border:1.5px solid #3b82f6; background:#eff6ff; color:#2563eb; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; transition:all .2s; font-family:'Sarabun',sans-serif; }
+    .btn-edit:hover { background:#2563eb; color:#fff; }
+    .btn-danger { padding:6px 12px; border:1.5px solid #ef4444; background:#fef2f2; color:#ef4444; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; transition:all .2s; font-family:'Sarabun',sans-serif; }
+    .btn-danger:hover { background:#ef4444; color:#fff; }
+    .file-upload-area { border:2px dashed #cbd5e1; border-radius:12px; padding:20px; text-align:center; cursor:pointer; transition:all .2s; margin-top:8px; }
+    .file-upload-area:hover { border-color:#3b82f6; background:#f8fafc; }
+    .file-upload-area.has-file { border-color:#10b981; background:#f0fdf4; }
+    .file-upload-area img { max-height:80px; margin-top:8px; }
+    .empty-state { text-align:center; padding:40px; color:#94a3b8; font-size:16px; }
+    @media (max-width:768px) {
+      .data-table { font-size:12px; }
+      .data-table thead th, .data-table tbody td { padding:8px 6px; }
+      .table-wrapper { overflow-x:auto; margin:0 -16px; padding:0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div class="loading-text" id="loadingText">กำลังดำเนินการ...</div>
+    <div class="loading-subtext" id="loadingSubtext">กรุณารอสักครู่</div>
+  </div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+
+<header class="app-header">
+  <div class="logo">👥</div>
+  <div>
+    <h1>จัดการข้อมูลพนักงานขาย</h1>
+    <p>เพิ่ม แก้ไข และลบข้อมูลพนักงานขาย</p>
+  </div>
+</header>
+
+<nav class="nav-bar" id="navBar">
+  <a href="#" onclick="goPage('index')">📋 สร้าง Sale Order</a>
+  <a href="#" class="active">👥 พนักงานขาย</a>
+  <a href="#" onclick="goPage('product')">📦 สินค้า</a>
+</nav>
+
+<div class="container">
+  <!-- Add/Edit Form -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon blue">➕</div>
+      <h2 id="formTitle">เพิ่มพนักงานขายใหม่</h2>
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>รหัสพนักงาน (Sales_ID) <span style="color:#ef4444">*</span></label>
+          <input type="text" id="salesId" placeholder="เช่น S001">
+        </div>
+        <div class="form-group">
+          <label>ชื่อ-นามสกุล <span style="color:#ef4444">*</span></label>
+          <input type="text" id="salesName" placeholder="เช่น ศรัณย์ ต๊ะปาน">
+        </div>
+        <div class="form-group">
+          <label>เบอร์โทร</label>
+          <input type="tel" id="salesPhone" placeholder="0xx-xxx-xxxx">
+        </div>
+        <div class="form-group">
+          <label>อีเมล</label>
+          <input type="email" id="salesEmail" placeholder="email@example.com">
+        </div>
+        <div class="form-group full-width">
+          <label>ลายเซ็น (รูปภาพ → แปลง Base64 WebP อัตโนมัติ)</label>
+          <div class="file-upload-area" id="sigUploadArea" onclick="document.getElementById('sigFileInput').click()">
+            <div id="sigPlaceholder">📎 คลิกเพื่อเลือกรูปลายเซ็น (JPG, PNG, WebP)</div>
+            <img id="sigPreview" src="" alt="" style="display:none;">
+          </div>
+          <input type="file" id="sigFileInput" accept="image/*" style="display:none;" onchange="handleSignatureUpload(this)">
+          <input type="hidden" id="sigBase64" value="">
+        </div>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveSP()">💾 บันทึก</button>
+        <button class="btn btn-secondary" onclick="clearForm()">🔄 ล้างฟอร์ม</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon green">📋</div>
+      <h2>รายชื่อพนักงานขายทั้งหมด</h2>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <div style="padding:12px 16px; border-bottom:1px solid #e2e8f0;">
+        <input type="text" id="searchBox" placeholder="🔍 ค้นหา... (รหัส, ชื่อ, เบอร์โทร, อีเมล)" oninput="renderTable()" style="width:100%;">
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>รหัส</th>
+              <th>ชื่อ-นามสกุล</th>
+              <th>เบอร์โทร</th>
+              <th>อีเมล</th>
+              <th>ลายเซ็น</th>
+              <th style="text-align:center;">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="spTableBody">
+            <tr><td colspan="6" class="empty-state">⏳ กำลังโหลดข้อมูล...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal">
+    <div class="modal-icon confirm">📋</div>
+    <h3 id="confirmTitle">ยืนยัน</h3>
+    <div class="modal-desc" id="confirmDesc"></div>
+    <div class="modal-actions">
+      <button class="btn-confirm-no" id="confirmNoBtn">ยกเลิก</button>
+      <button class="btn-confirm-yes" id="confirmYesBtn">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Global error handler — prevent white screen
+window.onerror = function(msg, url, line) {
+  console.error('Error:', msg, 'at line', line);
+  try { hideLoading(); } catch(e) {}
+  return false;
+};
+
+var allSalespersons = [];
+
+document.addEventListener('DOMContentLoaded', loadData);
+
+function goPage(page) {
+  var suffix = page === 'index' ? 'index.html' : page + '.html';
+  if (page === "product") suffix = "master-product.html";
+  window.location.href = suffix;
+}
+
+async function loadData() {
+  showLoading('กำลังโหลดข้อมูลพนักงานขาย...', 'กรุณารอสักครู่');
+  var isDone = false;
+
+  var safetyTimer = setTimeout(function() {
+    if (!isDone) {
+      hideLoading();
+      showToast('การโหลดข้อมูลล่าช้า ข้อมูลอาจแสดงไม่ครบถ้วน', 'warning');
+    }
+  }, 10000);
+
+  try {
+    const res = await API.getSalespersons();
+    isDone = true;
+    clearTimeout(safetyTimer);
+    allSalespersons = res.data || [];
+    renderTable();
+    hideLoading();
+  } catch(err) {
+    isDone = true;
+    clearTimeout(safetyTimer);
+    hideLoading();
+    showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
+  }
+}
+
+function renderTable() {
+  var tbody = document.getElementById('spTableBody');
+  var query = (document.getElementById('searchBox').value || '').trim().toLowerCase();
+  var filtered = allSalespersons.filter(function(sp) {
+    if (!query) return true;
+    var searchStr = [sp.Sales_ID, sp.Sales_Name, sp.Phone, sp.Email].join(' ').toLowerCase();
+    return searchStr.indexOf(query) !== -1;
+  });
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">' + (allSalespersons.length === 0 ? '📭 ยังไม่มีข้อมูลพนักงานขาย' : '🔍 ไม่พบข้อมูลที่ค้นหา') + '</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '';
+  filtered.forEach(function(sp) {
+    var tr = document.createElement('tr');
+    var sigHtml = sp.Signature_Base64
+      ? '<img class="sig-preview" src="' + (sp.Signature_Base64.indexOf('data:') === 0 ? sp.Signature_Base64 : 'data:image/webp;base64,' + sp.Signature_Base64) + '">'
+      : '<span style="color:#94a3b8">ไม่มี</span>';
+    tr.innerHTML =
+      '<td><strong>' + (sp.Sales_ID || '') + '</strong></td>' +
+      '<td>' + (sp.Sales_Name || '') + '</td>' +
+      '<td>' + (sp.Phone || '') + '</td>' +
+      '<td>' + (sp.Email || '') + '</td>' +
+      '<td>' + sigHtml + '</td>' +
+      '<td style="text-align:center; white-space:nowrap;">' +
+        '<button class="btn-edit" onclick="editSP(\'' + sp.Sales_ID + '\')">✏️ แก้ไข</button> ' +
+        '<button class="btn-danger" onclick="confirmDeleteSP(\'' + sp.Sales_ID + '\')">🗑 ลบ</button>' +
+      '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function handleSignatureUpload(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    // Convert to WebP via canvas
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      var webpData = canvas.toDataURL('image/webp', 0.8);
+      document.getElementById('sigBase64').value = webpData;
+      document.getElementById('sigPreview').src = webpData;
+      document.getElementById('sigPreview').style.display = 'block';
+      document.getElementById('sigPlaceholder').textContent = '✅ ' + file.name;
+      document.getElementById('sigUploadArea').classList.add('has-file');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveSP() {
+  var id = document.getElementById('salesId').value.trim();
+  var name = document.getElementById('salesName').value.trim();
+  if (!id || !name) { showToast('กรุณากรอกรหัสและชื่อพนักงาน', 'error'); return; }
+
+  showConfirm('💾 ยืนยันการบันทึก', 'บันทึกข้อมูลพนักงาน <strong>' + name + '</strong> (' + id + ')?', async function() {
+    showLoading('กำลังบันทึกข้อมูล...', 'ระบบกำลังเขียนลงฐานข้อมูล');
+    try {
+      const r = await API.saveSalesperson({
+        Sales_ID: id,
+        Sales_Name: name,
+        Phone: document.getElementById('salesPhone').value,
+        Email: document.getElementById('salesEmail').value,
+        Signature_Base64: document.getElementById('sigBase64').value
+      });
+      hideLoading();
+      if (r.success) { showToast(r.message, 'success'); clearForm(); await loadData(); }
+      else showToast(r.error, 'error');
+    } catch(err) {
+       hideLoading(); showToast(err.message, 'error'); 
+    }
+  });
+}
+
+function editSP(salesId) {
+  var sp = allSalespersons.find(function(s) { return s.Sales_ID === salesId; });
+  if (!sp) return;
+  document.getElementById('salesId').value = sp.Sales_ID;
+  document.getElementById('salesName').value = sp.Sales_Name || '';
+  document.getElementById('salesPhone').value = sp.Phone || '';
+  document.getElementById('salesEmail').value = sp.Email || '';
+  if (sp.Signature_Base64) {
+    var src = sp.Signature_Base64.indexOf('data:') === 0 ? sp.Signature_Base64 : 'data:image/webp;base64,' + sp.Signature_Base64;
+    document.getElementById('sigBase64').value = sp.Signature_Base64;
+    document.getElementById('sigPreview').src = src;
+    document.getElementById('sigPreview').style.display = 'block';
+    document.getElementById('sigUploadArea').classList.add('has-file');
+    document.getElementById('sigPlaceholder').textContent = '✅ มีลายเซ็นแล้ว';
+  }
+  document.getElementById('formTitle').textContent = '✏️ แก้ไขพนักงาน: ' + sp.Sales_ID;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function confirmDeleteSP(salesId) {
+  showConfirm('🗑 ยืนยันการลบ', 'ต้องการลบพนักงาน <strong>' + salesId + '</strong> หรือไม่?<br>ข้อมูลจะถูกลบถาวร', async function() {
+    showLoading('กำลังลบข้อมูล...');
+    try {
+      const r = await API.deleteSalesperson(salesId);
+      hideLoading();
+      if (r.success) { showToast(r.message, 'success'); await loadData(); }
+      else showToast(r.error, 'error');
+    } catch(err) {
+       hideLoading(); showToast(err.message || 'Error', 'error'); 
+    }
+  });
+}
+
+function clearForm() {
+  document.getElementById('salesId').value = '';
+  document.getElementById('salesName').value = '';
+  document.getElementById('salesPhone').value = '';
+  document.getElementById('salesEmail').value = '';
+  document.getElementById('sigBase64').value = '';
+  document.getElementById('sigPreview').style.display = 'none';
+  document.getElementById('sigUploadArea').classList.remove('has-file');
+  document.getElementById('sigPlaceholder').textContent = '📎 คลิกเพื่อเลือกรูปลายเซ็น (JPG, PNG, WebP)';
+  document.getElementById('formTitle').textContent = 'เพิ่มพนักงานขายใหม่';
+}
+
+// ── Shared UI functions ──
+function showLoading(t,s) { document.getElementById('loadingText').textContent=t||'กำลังดำเนินการ...'; document.getElementById('loadingSubtext').textContent=s||'กรุณารอสักครู่'; document.getElementById('loadingOverlay').classList.add('show'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+function showToast(msg,type) { type=type||'info'; var c=document.getElementById('toastContainer'); var t=document.createElement('div'); t.className='toast '+type; var i=type==='success'?'✅':(type==='error'?'❌':'ℹ️'); t.innerHTML='<span>'+i+'</span><span>'+msg+'</span>'; c.appendChild(t); setTimeout(function(){t.style.opacity='0';t.style.transform='translateX(120%)';t.style.transition='.3s';setTimeout(function(){t.remove();},300);},3500); }
+function showConfirm(title,desc,onYes) {
+  var el=document.getElementById('confirmModal');
+  document.getElementById('confirmTitle').innerHTML=title;
+  document.getElementById('confirmDesc').innerHTML=desc;
+  document.getElementById('confirmYesBtn').onclick=function(){el.classList.remove('show');if(onYes)onYes();};
+  document.getElementById('confirmNoBtn').onclick=function(){el.classList.remove('show');};
+  el.querySelector('.modal').style.animation='none'; setTimeout(function(){el.querySelector('.modal').style.animation='';},10);
+  el.classList.add('show');
+}
+</script>
+<script src="js/api.js"></script>
+</body>
+</html>
