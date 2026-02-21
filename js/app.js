@@ -23,7 +23,7 @@ function goPage(page) {
     let suffix = page === "index" ? "index.html" : page + ".html";
     if (page === "product") suffix = "master-product.html";
     if (page === "salesperson") suffix = "master-salesperson.html";
-    window.location.href = suffix;
+    window.location.href = "./" + suffix;
 }
 
 // ─── ON PAGE LOAD ───────────────────────────────────────
