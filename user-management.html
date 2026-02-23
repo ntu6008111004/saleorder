@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>จัดการผู้ใช้งานระบบ - Admin</title>
+  <link rel="stylesheet" href="./css/style.css">
+  <style>
+    .nav-bar { display:flex; gap:8px; padding:12px 24px; background:#f1f5f9; border-bottom:1px solid #e2e8f0; flex-wrap:wrap; }
+    .nav-bar a { padding:8px 16px; border-radius:8px; text-decoration:none; font-weight:600; font-size:13px; color:#64748b; transition:all .2s; cursor:pointer; }
+    .nav-bar a:hover { background:#dbeafe; color:#2563eb; }
+    .nav-bar a.active { background:#2563eb; color:#fff; }
+    
+    .data-table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+    .data-table thead th { background:linear-gradient(135deg,#059669,#10b981); color:#fff; padding:12px; text-align:left; font-weight:600; font-size:12px; position:sticky; top:0; }
+    .data-table thead th:first-child { border-radius:8px 0 0 0; }
+    .data-table thead th:last-child { border-radius:0 8px 0 0; }
+    .data-table tbody td { padding:10px 12px; border-bottom:1px solid #e2e8f0; vertical-align:middle; }
+    .data-table tbody tr:hover { background:#f8fafc; }
+    
+    .btn-edit { padding:6px 12px; border:1.5px solid #3b82f6; background:#eff6ff; color:#2563eb; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; transition:all .2s; }
+    .btn-edit:hover { background:#2563eb; color:#fff; }
+    .btn-danger { padding:6px 12px; border:1.5px solid #ef4444; background:#fef2f2; color:#ef4444; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; transition:all .2s; }
+    .btn-danger:hover { background:#ef4444; color:#fff; }
+    
+    .empty-state { text-align:center; padding:40px; color:#94a3b8; font-size:16px; }
+    .role-badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display:inline-block; }
+    .role-admin { background:#fee2e2; color:#ef4444; }
+    .role-user { background:#e0f2fe; color:#0ea5e9; }
+  </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div class="loading-text" id="loadingText">กำลังดำเนินการ...</div>
+  </div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+
+<header class="app-header">
+  <div class="logo">🛡️</div>
+  <div>
+    <h1>จัดการผู้ใช้งานระบบ</h1>
+    <p>เพิ่ม แก้ไข ลบ พนักงานที่เข้าใช้งานระบบ</p>
+  </div>
+</header>
+
+<nav class="nav-bar">
+  <a onclick="window.location.href='index.html'">📋 สร้าง Sale Order</a>
+  <a onclick="window.location.href='history.html'">📑 ประวัติการขาย</a>
+  <a onclick="window.location.href='master-salesperson.html'">👥 พนักงานขาย</a>
+  <a onclick="window.location.href='master-product.html'">📦 สินค้า</a>
+  <a class="active">🛡️ จัดการผู้ใช้</a>
+  <a onclick="window.location.href='system-log.html'">📡 ประวัติการใช้งาน</a>
+</nav>
+
+<div class="container">
+  <!-- Add/Edit Form -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon green">➕</div>
+      <h2 id="formTitle">เพิ่มผู้ใช้งานใหม่</h2>
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Username <span style="color:#ef4444">*</span></label>
+          <input type="text" id="userId" placeholder="ใช้สำหรับ Login">
+        </div>
+        <div class="form-group">
+          <label>PIN (รหัสผ่าน) <span style="color:#ef4444">*</span></label>
+          <input type="password" id="userPin" placeholder="4 ตัวอักษรขึ้นไป">
+        </div>
+        <div class="form-group">
+          <label>ชื่อผู้ใช้งาน <span style="color:#ef4444">*</span></label>
+          <input type="text" id="userName" placeholder="ชื่อที่จะแสดงในระบบและประวัติ">
+        </div>
+        <div class="form-group">
+          <label>บทบาท (Role)</label>
+          <select id="userRole">
+             <option value="User">User (ผู้ใช้งานทั่วไป)</option>
+             <option value="Admin">Admin (ผู้จัดการระบบ)</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:20px;">
+        <button class="btn btn-primary" onclick="saveUser()">💾 บันทึกผู้ใช้</button>
+        <button class="btn btn-secondary" onclick="clearForm()">🔄 ล้างฟอร์ม</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon blue">📋</div>
+      <h2>รายชื่อผู้ใช้งานทั้งหมด</h2>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Username</th>
+              <th>ชื่อ-นามสกุล</th>
+              <th>บทบาท (Role)</th>
+              <th style="text-align:center;">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody">
+            <tr><td colspan="4" class="empty-state">⏳ กำลังโหลด...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal">
+    <div class="modal-icon confirm">❓</div>
+    <h3 id="confirmTitle">ยืนยัน</h3>
+    <div class="modal-desc" id="confirmDesc"></div>
+    <div class="modal-actions">
+      <button class="btn-confirm-no" id="confirmNoBtn">ยกเลิก</button>
+      <button class="btn-confirm-yes" id="confirmYesBtn">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script>
+var allUsers = [];
+var currentEditId = null;
+
+document.addEventListener('DOMContentLoaded', loadData);
+
+async function loadData() {
+  showLoading('กำลังโหลดรายชื่อผู้ใช้...');
+  try {
+    const res = await fetchAPI("getSystemUsers");
+    allUsers = res.data || [];
+    renderTable();
+    hideLoading();
+  } catch(err) {
+    hideLoading();
+    showToast('โหลดข้อมูลผิดพลาด', 'error');
+  }
+}
+
+function renderTable() {
+  const tbody = document.getElementById('userTableBody');
+  tbody.innerHTML = '';
+  if (allUsers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">ไม่มีผู้ใช้งานในระบบ</td></tr>';
+    return;
+  }
+  
+  allUsers.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${u.id || ''}</td>
+      <td><strong>${u.username}</strong></td>
+      <td>${u.name}</td>
+      <td><span class="role-badge ${u.role === 'Admin' ? 'role-admin' : 'role-user'}">${u.role}</span></td>
+      <td style="text-align:center;">
+        <button class="btn-edit" onclick="editUser('${u.id}')">✏️ แก้ไข</button> 
+        <button class="btn-danger" onclick="confirmDeleteUser('${u.id}', '${u.username}')">🗑 ลบ</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function saveUser() {
+  const username = document.getElementById('userId').value.trim();
+  const pin = document.getElementById('userPin').value.trim();
+  const name = document.getElementById('userName').value.trim();
+  const role = document.getElementById('userRole').value;
+  
+  if (!username || !pin || !name) { 
+    showToast('กรุณากรอก Username, PIN และ ชื่อผู้ใช้ให้ครบ', 'error'); 
+    return; 
+  }
+
+  showConfirm('💾 แจ้งเตือน', 'ต้องการบันทึกผู้ใช้ ' + username + ' ใช่หรือไม่?', async function() {
+    showLoading();
+    try {
+      const res = await fetchAPI("saveSystemUser", { id: currentEditId, username, pin, name, role });
+      hideLoading();
+      if(res.success) {
+        showToast(res.message, 'success');
+        clearForm();
+        await loadData();
+      } else { showToast(res.error, 'error'); }
+    } catch(err) { hideLoading(); showToast('Error saving user', 'error'); }
+  });
+}
+
+function editUser(id) {
+  const u = allUsers.find(x => x.id === id);
+  if (!u) return;
+  currentEditId = u.id;
+  document.getElementById('userId').value = u.username;
+  document.getElementById('userPin').value = u.pin;
+  document.getElementById('userName').value = u.name;
+  document.getElementById('userRole').value = u.role;
+  document.getElementById('formTitle').textContent = '✏️ แก้ไขผู้ใช้งาน: ' + u.username;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function confirmDeleteUser(id, username) {
+  const current = Auth.getCurrentUser();
+  if (current && current.username === username) {
+      showToast('ไม่สามารถลบบัญชีตัวเองได้', 'error');
+      return;
+  }
+  showConfirm('🗑 ยืนยันการลบ', 'ต้องการลบผู้ใช้งาน <strong>' + username + '</strong> ถาวรหรือไม่?', async function() {
+    showLoading();
+    try {
+      const res = await fetchAPI("deleteSystemUser", { id });
+      hideLoading();
+      if(res.success) { showToast(res.message, 'success'); await loadData(); }
+      else { showToast(res.error, 'error'); }
+    } catch(err) { hideLoading(); showToast('Error deleting user', 'error'); }
+  });
+}
+
+function clearForm() {
+  currentEditId = null;
+  document.getElementById('userId').value = '';
+  document.getElementById('userPin').value = '';
+  document.getElementById('userName').value = '';
+  document.getElementById('userRole').value = 'User';
+  document.getElementById('formTitle').textContent = 'เพิ่มผู้ใช้งานใหม่';
+}
+
+function showLoading(t) { if(t) document.getElementById('loadingText').textContent=t; document.getElementById('loadingOverlay').classList.add('show'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+function showToast(msg,type) { type=type||'info'; var c=document.getElementById('toastContainer'); var t=document.createElement('div'); t.className='toast '+type; var i=type==='success'?'✅':(type==='error'?'❌':'ℹ️'); t.innerHTML='<span>'+i+'</span><span>'+msg+'</span>'; c.appendChild(t); setTimeout(function(){t.style.opacity='0';t.style.transform='translateX(120%)';t.style.transition='.3s';setTimeout(function(){t.remove();},300);},3500); }
+function showConfirm(title,desc,onYes) {
+  var el=document.getElementById('confirmModal');
+  document.getElementById('confirmTitle').innerHTML=title;
+  document.getElementById('confirmDesc').innerHTML=desc;
+  document.getElementById('confirmYesBtn').onclick=function(){el.classList.remove('show');if(onYes)onYes();};
+  document.getElementById('confirmNoBtn').onclick=function(){el.classList.remove('show');};
+  el.classList.add('show');
+}
+</script><footer style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 12px;">
+  System Version V1.0.1
+</footer>
+</body>
+</html>

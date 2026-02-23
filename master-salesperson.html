@@ -52,8 +52,9 @@
   </div>
 </header>
 
-<nav class="nav-bar" id="navBar">
+<nav class="nav-bar">
   <a href="#" onclick="goPage('index')">📋 สร้าง Sale Order</a>
+  <a href="#" onclick="goPage('history')">📑 ประวัติการขาย</a>
   <a href="#" class="active">👥 พนักงานขาย</a>
   <a href="#" onclick="goPage('product')">📦 สินค้า</a>
 </nav>
@@ -145,6 +146,7 @@
 </div>
 
 <script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
 <script>
 // Global error handler — prevent white screen
 window.onerror = function(msg, url, line) {
@@ -158,9 +160,10 @@ var allSalespersons = [];
 document.addEventListener('DOMContentLoaded', loadData);
 
 function goPage(page) {
-  var suffix = page === 'index' ? 'index.html' : page + '.html';
-  if (page === "product") suffix = "master-product.html";
-  window.location.href = suffix;
+  if (page === 'index') window.location.href = 'index.html';
+  if (page === 'history') window.location.href = 'history.html';
+  if (page === 'salesperson') window.location.href = 'master-salesperson.html';
+  if (page === 'product') window.location.href = 'master-product.html';
 }
 
 async function loadData() {
@@ -273,6 +276,7 @@ function editSP(salesId) {
   var sp = allSalespersons.find(function(s) { return s.Sales_ID === salesId; });
   if (!sp) return;
   document.getElementById('salesId').value = sp.Sales_ID;
+  document.getElementById('salesId').setAttribute('readonly', true);
   document.getElementById('salesName').value = sp.Sales_Name || '';
   document.getElementById('salesPhone').value = sp.Phone || '';
   document.getElementById('salesEmail').value = sp.Email || '';
@@ -304,6 +308,7 @@ function confirmDeleteSP(salesId) {
 
 function clearForm() {
   document.getElementById('salesId').value = '';
+  document.getElementById('salesId').removeAttribute('readonly');
   document.getElementById('salesName').value = '';
   document.getElementById('salesPhone').value = '';
   document.getElementById('salesEmail').value = '';
@@ -327,6 +332,8 @@ function showConfirm(title,desc,onYes) {
   el.querySelector('.modal').style.animation='none'; setTimeout(function(){el.querySelector('.modal').style.animation='';},10);
   el.classList.add('show');
 }
-</script>
+</script><footer style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 12px;">
+  System Version V1.0.1
+</footer>
 </body>
 </html>

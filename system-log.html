@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ประวัติการใช้งานระบบ - Admin</title>
+  <link rel="stylesheet" href="./css/style.css">
+  <style>
+    .nav-bar { display:flex; gap:8px; padding:12px 24px; background:#f1f5f9; border-bottom:1px solid #e2e8f0; flex-wrap:wrap; }
+    .nav-bar a { padding:8px 16px; border-radius:8px; text-decoration:none; font-weight:600; font-size:13px; color:#64748b; transition:all .2s; cursor:pointer; }
+    .nav-bar a:hover { background:#dbeafe; color:#2563eb; }
+    .nav-bar a.active { background:#2563eb; color:#fff; }
+    
+    .data-table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+    .data-table thead th { background:linear-gradient(135deg,#9333ea,#7e22ce); color:#fff; padding:12px; text-align:left; font-weight:600; font-size:12px; position:sticky; top:0; }
+    .data-table thead th:first-child { border-radius:8px 0 0 0; }
+    .data-table thead th:last-child { border-radius:0 8px 0 0; }
+    .data-table tbody td { padding:10px 12px; border-bottom:1px solid #e2e8f0; vertical-align:middle; }
+    .data-table tbody tr:hover { background:#f8fafc; }
+    
+    .search-box { margin-bottom: 20px; position: relative; }
+    .search-box input { width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 14px; outline: none; transition: all .2s; }
+    .search-box input:focus { border-color: #9333ea; box-shadow: 0 0 0 4px rgba(147,51,234,0.1); }
+
+    .action-badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; background: #f3e8ff; color: #7e22ce; display:inline-block; }
+  </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div class="loading-text" id="loadingText">กำลังโหลดประวัติ...</div>
+  </div>
+</div>
+
+<header class="app-header">
+  <div class="logo">📡</div>
+  <div>
+    <h1>ประวัติการใช้งานระบบ (System Log)</h1>
+    <p>ตรวจสอบผู้ใช้งาน เพิ่ม ลบ แก้ไข พิมพ์เอกสาร</p>
+  </div>
+</header>
+
+<nav class="nav-bar">
+  <a onclick="window.location.href='index.html'">📋 สร้าง Sale Order</a>
+  <a onclick="window.location.href='history.html'">📑 ประวัติการขาย</a>
+  <a onclick="window.location.href='master-salesperson.html'">👥 พนักงานขาย</a>
+  <a onclick="window.location.href='master-product.html'">📦 สินค้า</a>
+  <a onclick="window.location.href='user-management.html'">🛡️ จัดการผู้ใช้</a>
+  <a class="active">📡 ประวัติการใช้งาน</a>
+</nav>
+
+<div class="container">
+  <div class="card">
+    <div class="card-header">
+      <div class="icon purple">📝</div>
+      <h2>รายการ Logs ทั้งหมด</h2>
+    </div>
+    <div class="card-body">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="ค้นหาชื่อผู้ทำรายการ หรือรายละเอียดการกด..." oninput="filterLogs()">
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="15%">เวลา (Timestamp)</th>
+              <th width="20%">ชื่อผู้ทำรายการ (User)</th>
+              <th width="20%">การกระทำ (Action)</th>
+              <th width="45%">รายละเอียด (Details)</th>
+            </tr>
+          </thead>
+          <tbody id="logTableBody">
+            <!-- Dynamic -->
+          </tbody>
+        </table>
+      </div>
+
+      <div id="pagination" class="pagination"></div>
+    </div>
+  </div>
+</div>
+
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script>
+  let allLogs = [];
+  let currentPage = 1;
+  const itemsPerPage = 20;
+
+  async function loadLogs() {
+    showLoading();
+    try {
+      const result = await fetchAPI("getSystemLogs");
+      if (result.success) {
+        allLogs = result.data || [];
+        renderTable();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderTable() {
+    const input = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allLogs.filter(L => 
+      (L.username || '').toLowerCase().includes(input) || 
+      (L.action || '').toLowerCase().includes(input) ||
+      (L.details || '').toLowerCase().includes(input)
+    );
+
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const paginated = filtered.slice(start, end);
+
+    const tbody = document.getElementById('logTableBody');
+    tbody.innerHTML = '';
+
+    if (paginated.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:40px; color:#64748b;">ไม่พบประวัติการใช้งาน</td></tr>';
+      return;
+    }
+
+    paginated.forEach(L => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="color:#64748b; font-size:12px;">${L.timestamp}</td>
+        <td style="font-weight:600; color:#3b82f6;">${L.username}</td>
+        <td><span class="action-badge">${L.action}</span></td>
+        <td style="color:#475569;">${L.details}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    renderPagination(totalPages);
+  }
+
+  function renderPagination(totalPages) {
+    const container = document.getElementById('pagination');
+    container.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    for (let i = 1; i <= totalPages; i++) {
+        // limit pagination buttons to save space
+        if(i !== 1 && i !== totalPages && Math.abs(i - currentPage) > 2) {
+           if(i === 2 || i === totalPages - 1) {
+               const span = document.createElement('span');
+               span.innerHTML = "&nbsp;...&nbsp;";
+               container.appendChild(span);
+           }
+           continue;
+        }
+
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.className = i === currentPage ? 'active' : '';
+        btn.onclick = () => { currentPage = i; renderTable(); };
+        container.appendChild(btn);
+    }
+  }
+
+  function filterLogs() {
+    currentPage = 1;
+    renderTable();
+  }
+
+  function showLoading() { document.getElementById('loadingOverlay').classList.add('show'); }
+  function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+
+  window.onload = loadLogs;
+</script>
+<footer style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 12px;">
+  System Version V1.0.1
+</footer>
+</body>
+</html>

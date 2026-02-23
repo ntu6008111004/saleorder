@@ -1,23 +1,59 @@
 // ─── API CONFIGURATION ────────────────────────────────
 // IMPORTANT: Replace this URL with your published Google Apps Script Web App URL
-const API_URL = "https://script.google.com/macros/s/AKfycbwH5HPC_haBUFCHAmLUKphQqRhi8Vq6vJMwGDlDQ-gEMEb0D-B8KlyflV0Yr2sjpkR1-g/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxy288p_FhOtHzzxswQYklj-WH0KeCHdUCqiX1mu_XDNtfTmuvK_ZzBJrmZKtR4CELEYw/exec";
+
+// ─── PAYLOAD ENCRYPTION ─────────────────────────────────
+function encryptPayload(data) {
+  const str = JSON.stringify(data);
+  const uriEncoded = encodeURIComponent(str);
+  const b64 = btoa(uriEncoded);
+  // Reverse string for simple obfuscation
+  return b64.split('').reverse().join('');
+}
+
+function decryptResponse(str) {
+  try {
+    const b64 = str.split('').reverse().join('');
+    const uriEncoded = atob(b64);
+    const jsonStr = decodeURIComponent(uriEncoded);
+    return JSON.parse(jsonStr);
+  } catch(e) {
+    console.error("Decryption error", e);
+    return null;
+  }
+}
 
 // ─── CORE API FETCHER ─────────────────────────────────
 async function fetchAPI(action, payload = {}) {
   try {
+    // Inject current user into payload for logging
+    try {
+        const u = localStorage.getItem("so_currentUser");
+        if(u) payload.currentUser = JSON.parse(u);
+    } catch(e) {}
+
+    const reqData = { action: action, payload: payload };
+    const encryptedBody = encryptPayload(reqData);
+
     const response = await fetch(API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "text/plain;charset=utf-8", // text/plain to avoid CORS preflight issues
+        "Content-Type": "text/plain;charset=utf-8", 
       },
-      body: JSON.stringify({ action: action, payload: payload }),
+      body: encryptedBody,
     });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const result = await response.json();
+    const textResponse = await response.text();
+    let result;
+    if (textResponse.trim().startsWith('{') || textResponse.trim().startsWith('[')) {
+      result = JSON.parse(textResponse);
+    } else {
+      result = decryptResponse(textResponse);
+    }
     return result;
   } catch (error) {
     console.error(`API Error (${action}):`, error);
@@ -47,6 +83,7 @@ const API = {
     return await fetchAPI("saveSaleOrder", payload);
   },
 
+  getSaleOrders: () => fetchAPI("getSaleOrders"),
   getSaleOrderForPrint: async (soNumber) => {
     return await fetchAPI("getSaleOrderForPrint", { soNumber: soNumber });
   },

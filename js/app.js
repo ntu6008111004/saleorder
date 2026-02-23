@@ -30,28 +30,57 @@ function goPage(page) {
 document.addEventListener("DOMContentLoaded", function () {
   loadMasterData();
   setDefaultDate();
+  initDatePickers();
 });
+
+function initDatePickers() {
+  const pairs = [
+    { text: 'soDate', pick: 'soDatePick' },
+    { text: 'deliveryDate', pick: 'deliveryDatePick' }
+  ];
+
+  pairs.forEach(p => {
+    const textEl = document.getElementById(p.text);
+    const pickEl = document.getElementById(p.pick);
+    if (!textEl || !pickEl) return;
+
+    pickEl.addEventListener('change', function() {
+      if (!this.value) return;
+      const [y, m, d] = this.value.split('-');
+      const beYear = parseInt(y) + 543;
+      textEl.value = `${d}/${m}/${beYear}`;
+    });
+  });
+}
+
+function togglePicker(id) {
+  const el = document.getElementById(id);
+  if (el && el.showPicker) {
+    el.showPicker();
+  } else if (el) {
+    el.focus();
+    el.click();
+  }
+}
 
 function setDefaultDate() {
   const today = new Date();
-  const yyyy = today.getFullYear();
+  const beYear = today.getFullYear() + 543;
   const mm = ("0" + (today.getMonth() + 1)).slice(-2);
   const dd = ("0" + today.getDate()).slice(-2);
   const dateInput = document.getElementById("soDate");
-  if(dateInput) dateInput.value = yyyy + "-" + mm + "-" + dd;
+  if(dateInput) dateInput.value = dd + "/" + mm + "/" + beYear;
 }
 
 // ─── LOAD MASTER DATA ───────────────────────────────────
 async function loadMasterData() {
-  // If not on the main index page, we might not need all this data, but for simplicity we load it if elements exist
-  if(!document.getElementById('salesId')) return; 
+  const isIndex = !!document.getElementById('salesId');
+  if (!isIndex) return;
 
+  console.log("Starting master data load...");
   showLoading("กำลังเตรียมระบบ...", "กรุณารอสักครู่ ระบบกำลังโหลดข้อมูลพื้นฐานจากเซิร์ฟเวอร์");
-  
-  let loaded = 0;
-  let total = 3;
-  let isDone = false;
 
+  let isDone = false;
   const safetyTimer = setTimeout(function () {
     if (!isDone) {
       console.warn("Loading took too long. Force closing overlay.");
@@ -61,44 +90,60 @@ async function loadMasterData() {
     }
   }, 10000);
 
-  function checkDone() {
-    loaded++;
-    if (loaded >= total && !isDone) {
-      isDone = true;
-      clearTimeout(safetyTimer);
-      hideLoading();
-      addProductRow();
+  try {
+    // Load all data in parallel
+    const [spRes, prRes, addrRes] = await Promise.all([
+      API.getSalespersons().catch(e => { console.error("Salespersons error:", e); return { success: false, error: e.message }; }),
+      API.getProducts().catch(e => { console.error("Products error:", e); return { success: false, error: e.message }; }),
+      API.getThaiAddressDB().catch(e => { console.error("Address DB error:", e); return { success: false, error: e.message }; })
+    ]);
+
+    isDone = true;
+    clearTimeout(safetyTimer);
+
+    // 1. Process Salespersons
+    if (spRes && spRes.success && Array.isArray(spRes.data)) {
+      masterSalespersons = spRes.data;
+      console.log("Loaded salespersons:", masterSalespersons.length);
+    } else {
+      console.error("Failed to load salespersons:", spRes);
+      showToast("⚠️ โหลดพนักงานขายไม่สำเร็จ", "error");
     }
-  }
-
-  try {
-    const spRes = await API.getSalespersons();
-    masterSalespersons = spRes.data || [];
     populateSalespersonDropdown();
-    checkDone();
-  } catch (err) {
-    showToast("ไม่สามารถโหลดข้อมูลพนักงานขายได้", "error");
-    checkDone();
-  }
 
-  try {
-    const prRes = await API.getProducts();
-    masterProducts = prRes.data || [];
-    checkDone();
-  } catch (err) {
-    showToast("ไม่สามารถโหลดข้อมูลสินค้าได้", "error");
-    checkDone();
-  }
+    // 2. Process Products
+    if (prRes && prRes.success && Array.isArray(prRes.data)) {
+      masterProducts = prRes.data;
+      console.log("Loaded products:", masterProducts.length);
+    } else {
+      console.error("Failed to load products:", prRes);
+      showToast("⚠️ โหลดข้อมูลสินค้าไม่สำเร็จ", "error");
+    }
 
-  try {
-    const addrRes = await API.getThaiAddressDB();
-    thaiAddressDB = addrRes.data || [];
-    initAddressAutocomplete("billingDistrict", "billingAmphoe", "billingProvince", "billingZipcode");
-    initAddressAutocomplete("shippingDistrict", "shippingAmphoe", "shippingProvince", "shippingZipcode");
-    checkDone();
+    // 3. Process Address Data
+    if (addrRes && addrRes.success && Array.isArray(addrRes.data)) {
+      thaiAddressDB = addrRes.data;
+      console.log("✅ Loaded address database:", thaiAddressDB.length, "items");
+      if (thaiAddressDB.length > 0) {
+        console.log("📍 Address Sample [0]:", JSON.stringify(thaiAddressDB[0]));
+        if (thaiAddressDB[0]._t) console.log("🕒 Backend Data Timestamp:", thaiAddressDB[0]._t);
+      }
+      initAddressAutocomplete("billingDistrict", "billingAmphoe", "billingProvince", "billingZipcode");
+      initAddressAutocomplete("shippingDistrict", "shippingAmphoe", "shippingProvince", "shippingZipcode");
+    } else {
+      console.error("Failed to load address data:", addrRes);
+      showToast("⚠️ โหลดสมุดรายนามที่อยู่ไม่สำเร็จ", "error");
+    }
+
+    hideLoading();
+    if (rowCounter === 0) addProductRow();
+
   } catch (err) {
-    showToast("ไม่สามารถโหลดข้อมูลที่อยู่ได้", "error");
-    checkDone();
+    console.error("Fatal data loading error:", err);
+    isDone = true;
+    clearTimeout(safetyTimer);
+    hideLoading();
+    showToast("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + err.message, "error");
   }
 }
 
@@ -117,63 +162,80 @@ function populateSalespersonDropdown() {
 
 // ─── ADDRESS AUTO-COMPLETE ──────────────────────────────
 function initAddressAutocomplete(districtId, amphoeId, provinceId, zipcodeId) {
-  const districtInput = document.getElementById(districtId);
-  if(!districtInput) return;
-  const wrapper = districtInput.closest(".autocomplete-wrapper");
-  const listEl = wrapper.querySelector(".autocomplete-list");
+  const ids = [districtId, amphoeId, provinceId, zipcodeId];
+  const sameAddressCheck = document.getElementById("sameAddress");
 
-  districtInput.addEventListener("input", function () {
-    const query = this.value.trim().toLowerCase();
-    if (query.length < 1) {
-      listEl.classList.remove("show");
-      return;
-    }
+  ids.forEach(function (currentId) {
+    const input = document.getElementById(currentId);
+    if (!input) return;
 
-    const matches = thaiAddressDB
-      .filter(function (item) {
-        return (
-          item.d.toLowerCase().indexOf(query) !== -1 ||
-          item.a.toLowerCase().indexOf(query) !== -1 ||
-          item.p.toLowerCase().indexOf(query) !== -1 ||
-          item.z.indexOf(query) !== -1
-        );
-      })
-      .slice(0, 20);
+    const wrapper = input.closest(".autocomplete-wrapper");
+    if (!wrapper) return;
+    const listEl = wrapper.querySelector(".autocomplete-list");
 
-    listEl.innerHTML = "";
-    if (matches.length === 0) {
-      listEl.classList.remove("show");
-      return;
-    }
-
-    matches.forEach(function (item) {
-      const div = document.createElement("div");
-      div.className = "autocomplete-item";
-      div.innerHTML =
-        '<span class="district">' +
-        item.d +
-        "</span>" +
-        '<span class="detail"> » ' +
-        item.a +
-        " » " +
-        item.p +
-        " » " +
-        item.z +
-        "</span>";
-      div.addEventListener("click", function () {
-        document.getElementById(districtId).value = item.d;
-        document.getElementById(amphoeId).value = item.a;
-        document.getElementById(provinceId).value = item.p;
-        document.getElementById(zipcodeId).value = item.z;
+    input.addEventListener("input", function () {
+      const query = this.value.trim().toLowerCase();
+      if (query.length < 1) {
         listEl.classList.remove("show");
-      });
-      listEl.appendChild(div);
-    });
-    listEl.classList.add("show");
-  });
+        return;
+      }
 
-  document.addEventListener("click", function (e) {
-    if (!wrapper.contains(e.target)) listEl.classList.remove("show");
+      const matches = thaiAddressDB
+        .filter(function (item) {
+          const d = (item.d || "").toLowerCase();
+          const a = (item.a || "").toLowerCase();
+          const p = (item.p || "").toLowerCase();
+          const z = (item.z || "").toLowerCase();
+
+          return (
+            d.indexOf(query) !== -1 ||
+            a.indexOf(query) !== -1 ||
+            p.indexOf(query) !== -1 ||
+            z.indexOf(query) !== -1
+          );
+        })
+        .slice(0, 20);
+
+      listEl.innerHTML = "";
+      if (matches.length === 0) {
+        listEl.classList.remove("show");
+        return;
+      }
+
+      matches.forEach(function (item) {
+        const div = document.createElement("div");
+        div.className = "autocomplete-item";
+        div.innerHTML =
+          '<span class="district">' +
+          item.d +
+          "</span>" +
+          '<span class="detail"> » ' +
+          item.a +
+          " » " +
+          item.p +
+          " » " +
+          item.z +
+          "</span>";
+        div.addEventListener("click", function () {
+          document.getElementById(districtId).value = item.d;
+          document.getElementById(amphoeId).value = item.a;
+          document.getElementById(provinceId).value = item.p;
+          document.getElementById(zipcodeId).value = item.z;
+          listEl.classList.remove("show");
+
+          // If "Same as Billing" is checked and we are editing billing, update shipping too
+          if (sameAddressCheck && sameAddressCheck.checked && currentId.indexOf("billing") === 0) {
+            toggleSameAddress(sameAddressCheck);
+          }
+        });
+        listEl.appendChild(div);
+      });
+      listEl.classList.add("show");
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!wrapper.contains(e.target)) listEl.classList.remove("show");
+    });
   });
 }
 
@@ -206,7 +268,8 @@ function addProductRow() {
     '<option value="ซอง">ซอง</option><option value="ถุง">ถุง</option>' +
     '<option value="เครื่อง">เครื่อง</option><option value="ตัว">ตัว</option>' +
     '<option value="คู่">คู่</option><option value="ดวง">ดวง</option>' +
-    '<option value="ผืน">ผืน</option><option value="เส้น">เส้น</option>';
+    '<option value="ผืน">ผืน</option><option value="เส้น">เส้น</option>' +
+    '<option value="ด้าม">ด้าม</option><option value="กระป๋อง">กระป๋อง</option>';
 
   tr.innerHTML =
     '<td class="td-no">' +
@@ -227,7 +290,7 @@ function addProductRow() {
     '<td class="col-price"><input type="number" class="unit-price" value="0" step="0.01" oninput="calculateRowTotal(this)"></td>' +
     '<td class="col-disc"><input type="number" class="discount" value="0" step="0.01" oninput="calculateRowTotal(this)"></td>' +
     '<td class="col-total"><span class="total-display">0.00</span></td>' +
-    '<td class="col-remark"><input type="text" class="item-remark" placeholder="หมายเหตุ"></td>' +
+    '<td class="col-remark"><textarea class="item-remark" placeholder="หมายเหตุ" rows="1"></textarea></td>' +
     '<td class="col-action"><button class="btn-delete" type="button" onclick="removeProductRow(this)" title="ลบรายการ">🗑</button></td>';
 
   tbody.appendChild(tr);
@@ -235,59 +298,81 @@ function addProductRow() {
 }
 
 // ─── SEARCHABLE PRODUCT DROPDOWN ────────────────────────
+
+// ─── FLOATING PRODUCT DROPDOWN (pops out of table) ────────
+var _activeProductInput = null;
+var _productFloatEl = null;
+
+function getProductFloatEl() {
+  if (!_productFloatEl) {
+    _productFloatEl = document.createElement("div");
+    _productFloatEl.id = "productFloatDropdown";
+    _productFloatEl.style.cssText =
+      "position:fixed;z-index:99999;background:#fff;" +
+      "border:1.5px solid #93c5fd;border-radius:0 0 8px 8px;" +
+      "max-height:220px;overflow-y:auto;display:none;" +
+      "box-shadow:0 10px 25px rgba(0,0,0,.15);";
+    document.body.appendChild(_productFloatEl);
+  }
+  return _productFloatEl;
+}
+
+function positionFloatDropdown(input) {
+  var dd = getProductFloatEl();
+  var rect = input.getBoundingClientRect();
+  dd.style.left = rect.left + "px";
+  dd.style.top  = rect.bottom + "px";
+  dd.style.width = rect.width + "px";
+}
+
 function openProductSearch(input) {
-  const wrapper = input.closest(".search-select-wrapper");
-  const list = wrapper.querySelector(".search-select-list");
-  renderProductList(list, "");
-  list.classList.add("show");
+  _activeProductInput = input;
+  var dd = getProductFloatEl();
+  renderProductList(dd, "");
+  positionFloatDropdown(input);
+  dd.style.display = "block";
 }
 
 function filterProductSearch(input) {
-  const wrapper = input.closest(".search-select-wrapper");
-  const list = wrapper.querySelector(".search-select-list");
-  renderProductList(list, input.value.trim().toLowerCase());
-  list.classList.add("show");
+  _activeProductInput = input;
+  var dd = getProductFloatEl();
+  renderProductList(dd, input.value.trim().toLowerCase());
+  positionFloatDropdown(input);
+  dd.style.display = "block";
 }
 
 function renderProductList(list, query) {
   list.innerHTML = "";
   const filtered = masterProducts.filter(function (p) {
     if (!query) return true;
-    return (
-      (p.Product_Code + " " + p.Product_Name).toLowerCase().indexOf(query) !==
-      -1
-    );
+    return (p.Product_Code + " " + p.Product_Name).toLowerCase().indexOf(query) !== -1;
   });
   if (filtered.length === 0) {
-    list.innerHTML =
-      '<div class="search-select-item" style="color:#94a3b8;cursor:default;">ไม่พบสินค้า</div>';
+    list.innerHTML = '<div style="padding:10px 14px;color:#94a3b8;font-size:13px;">ไม่พบสินค้า</div>';
     return;
   }
   filtered.forEach(function (p) {
     const div = document.createElement("div");
     div.className = "search-select-item";
     div.innerHTML =
-      '<span class="code">' +
-      p.Product_Code +
-      '</span><span class="name">' +
-      p.Product_Name +
-      "</span>";
-    div.addEventListener("click", function () {
-      selectProduct(list, p);
+      '<span class="code">' + p.Product_Code + '</span>' +
+      '<span class="name">' + p.Product_Name + "</span>";
+    div.addEventListener("click", function (e) {
+      e.stopPropagation();
+      selectProduct(p);
     });
     list.appendChild(div);
   });
 }
 
-function selectProduct(list, product) {
-  const wrapper = list.closest(".search-select-wrapper");
-  const row = wrapper.closest("tr");
-  const input = wrapper.querySelector(".product-search");
-  const hidden = wrapper.querySelector(".product-select-value");
+function selectProduct(product) {
+  if (!_activeProductInput) return;
+  var wrapper = _activeProductInput.closest(".search-select-wrapper");
+  var row = wrapper.closest("tr");
+  var hidden = wrapper.querySelector(".product-select-value");
 
-  input.value = product.Product_Code + " - " + product.Product_Name;
+  _activeProductInput.value = product.Product_Code + " - " + product.Product_Name;
   hidden.value = product.Product_Code;
-  list.classList.remove("show");
 
   row.querySelector(".product-name").value = product.Product_Name || "";
   const unitSelect = row.querySelector(".unit");
@@ -303,13 +388,19 @@ function selectProduct(list, product) {
   }
   row.querySelector(".unit-price").value = product.Unit_Price || 0;
   calculateRowTotal(row.querySelector(".unit-price"));
+
+  // Close dropdown
+  var dd = getProductFloatEl();
+  dd.style.display = "none";
+  _activeProductInput = null;
 }
 
 document.addEventListener("click", function (e) {
-  if (!e.target.closest(".search-select-wrapper")) {
-    document.querySelectorAll(".search-select-list").forEach(function (l) {
-      l.classList.remove("show");
-    });
+  // Close floating product dropdown
+  if (_activeProductInput && !e.target.closest(".search-select-wrapper") && e.target !== _productFloatEl && !_productFloatEl.contains(e.target)) {
+    var dd = getProductFloatEl();
+    dd.style.display = "none";
+    _activeProductInput = null;
   }
   if (!e.target.closest(".autocomplete-wrapper")) {
     document.querySelectorAll(".autocomplete-list").forEach(function (l) {
@@ -317,6 +408,15 @@ document.addEventListener("click", function (e) {
     });
   }
 });
+
+// Reposition dropdown on scroll
+window.addEventListener("scroll", function () {
+  if (_activeProductInput && _productFloatEl && _productFloatEl.style.display !== "none") {
+    positionFloatDropdown(_activeProductInput);
+  }
+}, true);
+
+
 
 function removeProductRow(btn) {
   const tbody = document.getElementById("productTableBody");
@@ -492,7 +592,11 @@ async function doSave() {
     const result = await API.saveSaleOrder(formData);
     hideLoading();
     if (result.success) {
-      showSuccessModal(result.data || "N/A"); // Adjusted based on new API returning data as SO number
+      const soNum = result.data || "N/A";
+      // Added a slight delay as requested to ensure user feels the confirmation
+      setTimeout(function() {
+        showSuccessModal(soNum);
+      }, 500);
     } else {
       showErrorModal("บันทึกไม่สำเร็จ", "เกิดข้อผิดพลาด: " + result.error + "<br>กรุณาลองใหม่อีกครั้ง");
     }
@@ -555,11 +659,65 @@ function showErrorModal(title, desc) {
 }
 
 function closeModal(id) {
-  document.getElementById(id).classList.remove("show");
+  const el = document.getElementById(id);
+  if (el) el.classList.remove("show");
+  // If we close success modal, clear the form automatically as requested
+  if (id === "successModal") {
+    clearFormFields();
+  }
+}
+
+function clearFormFields() {
+  const form = document.getElementById("soForm");
+  if (form) form.reset();
+  
+  const tbody = document.getElementById("productTableBody");
+  if (tbody) {
+    tbody.innerHTML = "";
+    rowCounter = 0;
+    addProductRow();
+  }
+  
+  _soNumber = ""; 
+  calculateSummary();
+  setDefaultDate();
+  
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// Global click listener for modal backdrops
+document.addEventListener("click", function (e) {
+  if (e.target.classList.contains("modal-backdrop")) {
+    const id = e.target.id;
+    closeModal(id);
+  }
+});
+
+function resetForm() {
+  const form = document.getElementById("soForm");
+  if (form) form.reset();
+  
+  const tbody = document.getElementById("productTableBody");
+  if (tbody) {
+    tbody.innerHTML = "";
+    // Re-add one empty row for convenience
+    addProductRow();
+  }
+  
+  // Reset sequence/state if any
+  _soNumber = ""; 
+  calculateSummary();
+  setDefaultDate();
+  
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function printSO(soNumber) {
   if (!soNumber) soNumber = document.getElementById("modalSONumber").textContent;
+  if(typeof fetchAPI !== "undefined") {
+     fetchAPI("logAction", { actionName: "พิมพ์ใบสั่งขาย", details: "เลขที่ SO: " + soNumber }).catch(function(){});
+  }
   // Redirect to print template static page, passing SO number via URL params
   window.open("print-template.html?so=" + soNumber, "_blank");
 }
@@ -569,15 +727,9 @@ function newSO() {
   showConfirmModal(
     "🔄 เริ่มสร้างใบสั่งขายใหม่",
     "ระบบจะล้างข้อมูลทั้งหมดในฟอร์มปัจจุบัน<br>คุณแน่ใจหรือไม่?",
-    "ใช่ เริ่มใหม่เลย",
     "ยกเลิก",
     function () {
-      document.getElementById("soForm").reset();
-      document.getElementById("productTableBody").innerHTML = "";
-      rowCounter = 0;
-      addProductRow();
-      setDefaultDate();
-      calculateSummary();
+      clearFormFields();
       showToast("ล้างฟอร์มเรียบร้อย พร้อมสร้าง SO ใหม่", "success");
     }
   );
@@ -587,15 +739,9 @@ function resetForm() {
   showConfirmModal(
     "🔄 ล้างข้อมูลทั้งหมด",
     "ข้อมูลที่กรอกไว้ทั้งหมดจะถูกล้าง<br>คุณแน่ใจหรือไม่?",
-    "ใช่ ล้างข้อมูล",
     "ยกเลิก ไม่ล้าง",
     function () {
-      document.getElementById("soForm").reset();
-      document.getElementById("productTableBody").innerHTML = "";
-      rowCounter = 0;
-      addProductRow();
-      setDefaultDate();
-      calculateSummary();
+      clearFormFields();
       showToast("ล้างฟอร์มเรียบร้อยแล้ว", "success");
     }
   );
@@ -607,14 +753,51 @@ function resetForm() {
 function showLoading(title, desc) {
   const el = document.getElementById("loadingOverlay");
   if(!el) return;
-  if (title) document.getElementById("loadingTitle").textContent = title;
-  if (desc) document.getElementById("loadingDesc").textContent = desc;
+  const titleEl = document.getElementById("loadingText"); // Fixed ID
+  const descEl = document.getElementById("loadingSubtext"); // Fixed ID
+  if (titleEl && title) titleEl.textContent = title;
+  if (descEl && desc) descEl.textContent = desc;
   el.classList.add("show");
 }
 
 function hideLoading() {
   const el = document.getElementById("loadingOverlay");
   if(el) el.classList.remove("show");
+}
+
+function showConfirmModal(title, desc, yesText, noText, onYes) {
+  const el = document.getElementById("confirmModal");
+  if (!el) {
+    // Fallback if modal is missing
+    if(confirm(title + "\n\n" + desc.replace(/<[^>]*>/g, ''))) {
+      if(onYes) onYes();
+    }
+    return;
+  }
+  const titleEl = document.getElementById("confirmTitle");
+  const descEl = document.getElementById("confirmDesc");
+  if(titleEl) titleEl.innerHTML = title;
+  if(descEl) descEl.innerHTML = desc;
+  
+  const yesBtn = document.getElementById("confirmYesBtn");
+  const noBtn = document.getElementById("confirmNoBtn");
+  
+  if(yesText && yesBtn) yesBtn.textContent = yesText;
+  if(noText && noBtn) noBtn.textContent = noText;
+
+  if(yesBtn) {
+    yesBtn.onclick = function() {
+      el.classList.remove("show");
+      if(onYes) onYes();
+    };
+  }
+  if(noBtn) {
+    noBtn.onclick = function() {
+      el.classList.remove("show");
+    };
+  }
+  
+  el.classList.add("show");
 }
 
 function showToast(msg, type) {
@@ -636,4 +819,11 @@ function showToast(msg, type) {
       if(toast.parentNode) toast.remove();
     }, 300);
   }, 3000);
+}
+
+function goPage(page) {
+  if (page === 'index') window.location.href = 'index.html';
+  if (page === 'history') window.location.href = 'history.html';
+  if (page === 'salesperson') window.location.href = 'master-salesperson.html';
+  if (page === 'product') window.location.href = 'master-product.html';
 }

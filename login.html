@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>เข้าสู่ระบบ - ระบบออกใบสั่งขาย</title>
+  <link rel="stylesheet" href="./css/style.css">
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: var(--bg);
+      margin: 0;
+    }
+    .login-container {
+      background: #fff;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .login-container h1 {
+      font-size: 24px;
+      color: var(--primary);
+      margin-bottom: 5px;
+    }
+    .login-container p {
+      color: var(--text-light);
+      margin-bottom: 25px;
+      font-size: 14px;
+    }
+    .login-container .form-group {
+      text-align: left;
+    }
+    .login-container button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+    .error-msg {
+      color: var(--danger);
+      font-size: 14px;
+      margin-top: 15px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ CUTE LOADING OVERLAY ═══ -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="loading-dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+    <div class="loading-text" id="loadingText">กำลังตรวจสอบ...</div>
+    <div class="loading-subtext" id="loadingSubtext">กรุณารอสักครู่</div>
+  </div>
+</div>
+
+<div class="login-container">
+  <div style="font-size: 50px; margin-bottom: 10px;">📋</div>
+  <h1>เข้าสู่ระบบ Sale Order</h1>
+  <p>กรุณากรอกชื่อผู้ใช้และรหัส PIN เพื่อเข้าใช้งาน</p>
+  
+  <form id="loginForm" onsubmit="event.preventDefault(); doLogin();">
+    <div class="form-group">
+      <label>ชื่อผู้ใช้ (Username)</label>
+      <input type="text" id="username" placeholder="เช่น admin" required>
+    </div>
+    <div class="form-group">
+      <label>รหัสผ่าน (PIN)</label>
+      <input type="password" id="pin" placeholder="••••" required>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+    <button type="submit" class="btn btn-primary">เข้าสู่ระบบ</button>
+  </form>
+</div>
+
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script>
+  async function doLogin() {
+    const user = document.getElementById("username").value;
+    const pin = document.getElementById("pin").value;
+    const errorEl = document.getElementById("errorMsg");
+    const overlay = document.getElementById("loadingOverlay");
+    
+    errorEl.style.display = "none";
+    if(!user || !pin) return;
+    
+    overlay.classList.add("show");
+    
+    try {
+      const res = await fetchAPI("login", { username: user, pin: pin });
+      overlay.classList.remove("show");
+      
+      if(res.success) {
+         localStorage.setItem("so_currentUser", JSON.stringify(res.data));
+         window.location.href = "./index.html";
+      } else {
+         errorEl.textContent = res.error || "รหัสผ่านไม่ถูกต้อง";
+         errorEl.style.display = "block";
+      }
+    } catch(err) {
+      overlay.classList.remove("show");
+      errorEl.textContent = "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ โปรดลองใหม่";
+      errorEl.style.display = "block";
+    }
+  }
+</script>
+<footer style="text-align:center; padding: 20px; color: rgba(255,255,255,0.7); font-size: 12px;">
+  System Version V1.0.1
+</footer>
+</body>
+</html>

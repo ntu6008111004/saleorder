@@ -33,25 +33,11 @@
   </div>
 </header>
 
-<style>
-.nav-bar { display:flex; gap:8px; padding:12px 24px; background:#f1f5f9; border-bottom:1px solid #e2e8f0; flex-wrap:wrap; }
-.nav-bar a { padding:8px 16px; border-radius:8px; text-decoration:none; font-weight:600; font-size:13px; color:#64748b; transition:all .2s; cursor:pointer; }
-.nav-bar a:hover { background:#dbeafe; color:#2563eb; }
-.nav-bar a.active { background:#2563eb; color:#fff; }
-/* Searchable dropdown */
-.search-select-wrapper { position:relative; }
-.search-select-input { width:100%; cursor:pointer; }
-.search-select-list { position:absolute; top:100%; left:0; right:0; background:#fff; border:1.5px solid #93c5fd; border-top:none; border-radius:0 0 8px 8px; max-height:200px; overflow-y:auto; z-index:999; box-shadow:0 10px 25px rgba(0,0,0,.1); display:none; }
-.search-select-list.show { display:block; }
-.search-select-item { padding:8px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #e2e8f0; transition:background .15s; }
-.search-select-item:last-child { border-bottom:none; }
-.search-select-item:hover, .search-select-item.active { background:#eff6ff; color:#1d4ed8; }
-.search-select-item .code { font-weight:700; }
-.search-select-item .name { color:#64748b; margin-left:6px; }
-</style>
+
 
 <nav class="nav-bar">
   <a class="active">📋 สร้าง Sale Order</a>
+  <a onclick="goPage('history')">📑 ประวัติการขาย</a>
   <a onclick="goPage('salesperson')">👥 พนักงานขาย</a>
   <a onclick="goPage('product')">📦 สินค้า</a>
 </nav>
@@ -70,7 +56,11 @@
         <div class="form-grid">
           <div class="form-group">
             <label>วันที่สั่งขาย</label>
-            <input type="date" id="soDate">
+            <div class="date-input-wrapper">
+              <input type="text" id="soDate" placeholder="วว/ดด/ปปปป" maxlength="10">
+              <input type="date" class="hidden-picker" id="soDatePick">
+              <button type="button" class="picker-btn" onclick="togglePicker('soDatePick')">📅</button>
+            </div>
           </div>
           <div class="form-group">
             <label>รหัสลูกค้า</label>
@@ -121,15 +111,24 @@
           </div>
           <div class="form-group">
             <label>อำเภอ / เขต</label>
-            <input type="text" id="billingAmphoe" placeholder="อำเภอ / เขต">
+            <div class="autocomplete-wrapper">
+              <input type="text" id="billingAmphoe" placeholder="อำเภอ / เขต" autocomplete="off">
+              <div class="autocomplete-list"></div>
+            </div>
           </div>
           <div class="form-group">
             <label>จังหวัด</label>
-            <input type="text" id="billingProvince" placeholder="จังหวัด">
+            <div class="autocomplete-wrapper">
+              <input type="text" id="billingProvince" placeholder="จังหวัด" autocomplete="off">
+              <div class="autocomplete-list"></div>
+            </div>
           </div>
           <div class="form-group">
             <label>รหัสไปรษณีย์</label>
-            <input type="text" id="billingZipcode" placeholder="รหัสไปรษณีย์">
+            <div class="autocomplete-wrapper">
+              <input type="text" id="billingZipcode" placeholder="รหัสไปรษณีย์" autocomplete="off">
+              <div class="autocomplete-list"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -160,15 +159,24 @@
           </div>
           <div class="form-group">
             <label>อำเภอ / เขต</label>
-            <input type="text" id="shippingAmphoe" placeholder="อำเภอ / เขต">
+            <div class="autocomplete-wrapper">
+              <input type="text" id="shippingAmphoe" placeholder="อำเภอ / เขต" autocomplete="off">
+              <div class="autocomplete-list"></div>
+            </div>
           </div>
           <div class="form-group">
             <label>จังหวัด</label>
-            <input type="text" id="shippingProvince" placeholder="จังหวัด">
+            <div class="autocomplete-wrapper">
+              <input type="text" id="shippingProvince" placeholder="จังหวัด" autocomplete="off">
+              <div class="autocomplete-list"></div>
+            </div>
           </div>
           <div class="form-group">
             <label>รหัสไปรษณีย์</label>
-            <input type="text" id="shippingZipcode" placeholder="รหัสไปรษณีย์">
+            <div class="autocomplete-wrapper">
+              <input type="text" id="shippingZipcode" placeholder="รหัสไปรษณีย์" autocomplete="off">
+              <div class="autocomplete-list"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -216,11 +224,15 @@
           </div>
           <div class="form-group">
             <label>วันที่ส่งมอบสินค้า</label>
-            <input type="date" id="deliveryDate">
+            <div class="date-input-wrapper">
+              <input type="text" id="deliveryDate" placeholder="วว/ดด/ปปปป" maxlength="10">
+              <input type="date" class="hidden-picker" id="deliveryDatePick">
+              <button type="button" class="picker-btn" onclick="togglePicker('deliveryDatePick')">📅</button>
+            </div>
           </div>
           <div class="form-group full-width">
             <label>หมายเหตุ / โปรโมชั่น</label>
-            <textarea id="remarks" placeholder="เช่น โปรทดลองใช้ 1 แถม 15 ชุด" rows="2"></textarea>
+            <textarea id="remarks" placeholder="เช่น โปรทดลองใช้ 1 แถม 15 ชุด" rows="4"></textarea>
           </div>
         </div>
       </div>
@@ -317,6 +329,19 @@
   </div>
 </div>
 
+<!-- ═══ CONFIRM MODAL ═══ -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal">
+    <div class="modal-icon confirm">❓</div>
+    <h3 id="confirmTitle">ยืนยัน</h3>
+    <div class="modal-desc" id="confirmDesc"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="confirmNoBtn">ยกเลิก</button>
+      <button class="btn btn-primary" id="confirmYesBtn">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ ERROR MODAL ═══ -->
 <div class="modal-backdrop" id="errorModal">
   <div class="modal">
@@ -330,6 +355,9 @@
 </div>
 
 <script src="./js/api.js"></script>
-<script src="./js/app.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/app.js"></script><footer style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 12px;">
+  System Version V1.0.1
+</footer>
 </body>
 </html>

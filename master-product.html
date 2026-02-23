@@ -50,6 +50,7 @@
 
 <nav class="nav-bar">
   <a href="#" onclick="goPage('index')">📋 สร้าง Sale Order</a>
+  <a href="#" onclick="goPage('history')">📑 ประวัติการขาย</a>
   <a href="#" onclick="goPage('salesperson')">👥 พนักงานขาย</a>
   <a href="#" class="active">📦 สินค้า</a>
 </nav>
@@ -70,10 +71,6 @@
         <div class="form-group">
           <label>ชื่อสินค้า <span style="color:#ef4444">*</span></label>
           <input type="text" id="productName" placeholder="เช่น elevator S 3.0">
-        </div>
-        <div class="form-group">
-          <label>Running Number</label>
-          <input type="text" id="runningNumber" placeholder="เช่น RN001">
         </div>
         <div class="form-group">
           <label>เลขใบอนุญาต (License Number)</label>
@@ -103,6 +100,8 @@
             <option value="ดวง">ดวง</option>
             <option value="ผืน">ผืน</option>
             <option value="เส้น">เส้น</option>
+            <option value="ด้าม">ด้าม</option>
+            <option value="กระป๋อง">กระป๋อง</option>
             <option value="อื่นๆ">อื่นๆ</option>
           </select>
         </div>
@@ -122,7 +121,7 @@
     </div>
     <div class="card-body" style="padding:0;">
       <div style="padding:12px 16px; border-bottom:1px solid #e2e8f0;">
-        <input type="text" id="searchBox" placeholder="🔍 ค้นหา... (รหัส, ชื่อ, Running No., License No.)" oninput="renderTable()" style="width:100%;">
+        <input type="text" id="searchBox" placeholder="🔍 ค้นหา... (รหัส, ชื่อ, Running No., License No.)" oninput="handleSearch()" style="width:100%;">
       </div>
       <div class="table-wrapper">
         <table class="data-table">
@@ -130,7 +129,6 @@
             <tr>
               <th>รหัส</th>
               <th>ชื่อสินค้า</th>
-              <th>Running No.</th>
               <th>License No.</th>
               <th>ราคา/หน่วย</th>
               <th>หน่วย</th>
@@ -138,10 +136,11 @@
             </tr>
           </thead>
           <tbody id="pdTableBody">
-            <tr><td colspan="7" class="empty-state">⏳ กำลังโหลดข้อมูล...</td></tr>
+            <tr><td colspan="6" class="empty-state">⏳ กำลังโหลดข้อมูล...</td></tr>
           </tbody>
         </table>
       </div>
+      <div id="paginationContainer" class="pagination-container"></div>
     </div>
   </div>
 </div>
@@ -160,6 +159,7 @@
 </div>
 
 <script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
 <script>
 // Global error handler — prevent white screen
 window.onerror = function(msg, url, line) {
@@ -169,13 +169,16 @@ window.onerror = function(msg, url, line) {
 };
 
 var allProducts = [];
+var currentPage = 1;
+var pageSize = 10;
 
 document.addEventListener('DOMContentLoaded', loadData);
 
 function goPage(page) {
-  var suffix = page === 'index' ? 'index.html' : page + '.html';
-  if (page === "salesperson") suffix = "master-salesperson.html";
-  window.location.href = suffix;
+  if (page === 'index') window.location.href = 'index.html';
+  if (page === 'history') window.location.href = 'history.html';
+  if (page === 'salesperson') window.location.href = 'master-salesperson.html';
+  if (page === 'product') window.location.href = 'master-product.html';
 }
 
 async function loadData() {
@@ -209,22 +212,38 @@ function formatNum(n) { return parseFloat(n||0).toFixed(2).replace(/\B(?=(\d{3})
 function renderTable() {
   var tbody = document.getElementById('pdTableBody');
   var query = (document.getElementById('searchBox').value || '').trim().toLowerCase();
+  
+  // Filtering
   var filtered = allProducts.filter(function(p) {
     if (!query) return true;
-    var searchStr = [p.Product_Code, p.Product_Name, p.Running_Number, p.License_Number, p.Unit].join(' ').toLowerCase();
+    var searchStr = [p.Product_Code, p.Product_Name, p.License_Number, p.Unit].join(' ').toLowerCase();
     return searchStr.indexOf(query) !== -1;
   });
-  if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">' + (allProducts.length === 0 ? '📭 ยังไม่มีข้อมูลสินค้า' : '🔍 ไม่พบสินค้าที่ค้นหา') + '</td></tr>';
+
+  // Calculate Pagination
+  var totalItems = filtered.length;
+  var totalPages = Math.ceil(totalItems / pageSize) || 1;
+  
+  // Adjust currentPage if out of bounds (after search)
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  var startIndex = (currentPage - 1) * pageSize;
+  var endIndex = startIndex + pageSize;
+  var pagedItems = filtered.slice(startIndex, endIndex);
+
+  if (totalItems === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">' + (allProducts.length === 0 ? '📭 ยังไม่มีข้อมูลสินค้า' : '🔍 ไม่พบสินค้าที่ค้นหา') + '</td></tr>';
+    document.getElementById('paginationContainer').innerHTML = '';
     return;
   }
+
   tbody.innerHTML = '';
-  filtered.forEach(function(p) {
+  pagedItems.forEach(function(p) {
     var tr = document.createElement('tr');
     tr.innerHTML =
       '<td><strong>' + (p.Product_Code || '') + '</strong></td>' +
       '<td>' + (p.Product_Name || '') + '</td>' +
-      '<td>' + (p.Running_Number || '-') + '</td>' +
       '<td>' + (p.License_Number || '-') + '</td>' +
       '<td class="price-display" style="text-align:right;">' + formatNum(p.Unit_Price) + '</td>' +
       '<td>' + (p.Unit || '-') + '</td>' +
@@ -234,6 +253,48 @@ function renderTable() {
       '</td>';
     tbody.appendChild(tr);
   });
+
+  renderPagination(totalItems, totalPages);
+}
+
+function renderPagination(totalItems, totalPages) {
+  var container = document.getElementById('paginationContainer');
+  if (!container) return;
+
+  var html = '';
+  
+  // Previous Button
+  html += '<button class="pagination-btn" ' + (currentPage === 1 ? 'disabled' : '') + ' onclick="changePage(' + (currentPage - 1) + ')">ก่อนหน้า</button>';
+  
+  // Page Numbers (Simple version: 1 2 3 ... N)
+  var startPage = Math.max(1, currentPage - 2);
+  var endPage = Math.min(totalPages, startPage + 4);
+  if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+  for (var i = startPage; i <= endPage; i++) {
+    html += '<button class="pagination-btn ' + (i === currentPage ? 'active' : '') + '" onclick="changePage(' + i + ')">' + i + '</button>';
+  }
+
+  // Next Button
+  html += '<button class="pagination-btn" ' + (currentPage === totalPages ? 'disabled' : '') + ' onclick="changePage(' + (currentPage + 1) + ')">ถัดไป</button>';
+  
+  // Page Info
+  var from = ((currentPage - 1) * pageSize) + 1;
+  var to = Math.min(currentPage * pageSize, totalItems);
+  html += '<div class="pagination-info">แสดง ' + from + '-' + to + ' จาก ' + totalItems + ' รายการ</div>';
+
+  container.innerHTML = html;
+}
+
+function changePage(p) {
+  currentPage = p;
+  renderTable();
+  window.scrollTo({ top: document.querySelector('.data-table').offsetTop - 100, behavior: 'smooth' });
+}
+
+function handleSearch() {
+  currentPage = 1; // Reset to page 1 on search
+  renderTable();
 }
 
 function savePD() {
@@ -247,7 +308,6 @@ function savePD() {
       const r = await API.saveProduct({
         Product_Code: code,
         Product_Name: name,
-        Running_Number: document.getElementById('runningNumber').value,
         License_Number: document.getElementById('licenseNumber').value,
         Unit_Price: document.getElementById('unitPrice').value,
         Unit: document.getElementById('unitSelect').value
@@ -264,9 +324,10 @@ function savePD() {
 function editPD(code) {
   var p = allProducts.find(function(x) { return x.Product_Code === code; });
   if (!p) return;
-  document.getElementById('productCode').value = p.Product_Code;
+  var codeInput = document.getElementById('productCode');
+  codeInput.value = p.Product_Code;
+  codeInput.readOnly = true; // Prevent ID change during edit
   document.getElementById('productName').value = p.Product_Name || '';
-  document.getElementById('runningNumber').value = p.Running_Number || '';
   document.getElementById('licenseNumber').value = p.License_Number || '';
   document.getElementById('unitPrice').value = p.Unit_Price || '';
   document.getElementById('unitSelect').value = p.Unit || '';
@@ -289,9 +350,10 @@ function confirmDeletePD(code) {
 }
 
 function clearForm() {
-  document.getElementById('productCode').value = '';
+  var codeInput = document.getElementById('productCode');
+  codeInput.value = '';
+  codeInput.readOnly = false; // Re-enable for new entries
   document.getElementById('productName').value = '';
-  document.getElementById('runningNumber').value = '';
   document.getElementById('licenseNumber').value = '';
   document.getElementById('unitPrice').value = '';
   document.getElementById('unitSelect').value = '';
@@ -310,6 +372,8 @@ function showConfirm(title,desc,onYes) {
   el.querySelector('.modal').style.animation='none'; setTimeout(function(){el.querySelector('.modal').style.animation='';},10);
   el.classList.add('show');
 }
-</script>
+</script><footer style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 12px;">
+  System Version V1.0.1
+</footer>
 </body>
 </html>
