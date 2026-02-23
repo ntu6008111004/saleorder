@@ -6,11 +6,11 @@
 const Auth = {
   checkAuth: function() {
     const userStr = localStorage.getItem("so_currentUser");
-    const isLoginPage = window.location.pathname.endsWith("login.html") || window.location.pathname.endsWith("login");
+    const isLoginPage = window.location.pathname.endsWith("login.html");
 
     if (!userStr) {
       if (!isLoginPage) {
-        window.location.href = "./login";
+        window.location.href = "./login.html";
       }
       return null;
     }
@@ -21,23 +21,21 @@ const Auth = {
       
       // If we are on login page, redirect to index
       if (isLoginPage) {
-        window.location.href = "./index";
+        window.location.href = "./index.html";
         return user;
       }
       
       // If a non-admin tries to access admin pages, redirect to index
       const isAdminPage = window.location.pathname.endsWith("user-management.html") || 
-                          window.location.pathname.endsWith("user-management") ||
-                          window.location.pathname.endsWith("system-log.html") ||
-                          window.location.pathname.endsWith("system-log");
+                          window.location.pathname.endsWith("system-log.html");
       if (isAdminPage && !isAdmin) {
-        window.location.href = "./index";
+        window.location.href = "./index.html";
       }
 
       return user;
     } catch(e) {
       localStorage.removeItem("so_currentUser");
-      if (!isLoginPage) window.location.href = "./login";
+      if (!isLoginPage) window.location.href = "./login.html";
       return null;
     }
   },
@@ -50,7 +48,7 @@ const Auth = {
 
   logout: function() {
     localStorage.removeItem("so_currentUser");
-    window.location.href = "./login";
+    window.location.href = "./login.html";
   },
 
   confirmLogout: function() {
@@ -135,15 +133,15 @@ const Auth = {
             if(!hasUsers) {
                 const a = document.createElement("a");
                 a.innerHTML = "🛡️ จัดการผู้ใช้";
-                a.onclick = () => window.location.href = "./user-management";
-                if(window.location.pathname.endsWith("user-management.html") || window.location.pathname.endsWith("user-management")) a.className = "active";
+                a.onclick = () => window.location.href = "./user-management.html";
+                if(window.location.pathname.endsWith("user-management.html")) a.className = "active";
                 navBar.appendChild(a);
             }
             if(!hasLogs) {
                 const a = document.createElement("a");
                 a.innerHTML = "📡 ประวัติการใช้งาน";
-                a.onclick = () => window.location.href = "./system-log";
-                if(window.location.pathname.endsWith("system-log.html") || window.location.pathname.endsWith("system-log")) a.className = "active";
+                a.onclick = () => window.location.href = "./system-log.html";
+                if(window.location.pathname.endsWith("system-log.html")) a.className = "active";
                 navBar.appendChild(a);
             }
         }

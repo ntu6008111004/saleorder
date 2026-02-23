@@ -19,9 +19,9 @@ let rowCounter = 0;
 
 // ─── PAGE NAVIGATION ──────────────────────────────────
 function goPage(page) {
-    let target = page === "index" ? "index" : page;
-    if (page === "product") target = "master-product";
-    if (page === "salesperson") target = "master-salesperson";
+    let target = page === "index" ? "index.html" : page + ".html";
+    if (page === "product") target = "master-product.html";
+    if (page === "salesperson") target = "master-salesperson.html";
     window.location.href = "./" + target;
 }
 
