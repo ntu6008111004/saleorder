@@ -6,9 +6,11 @@
 const Auth = {
   checkAuth: function() {
     const userStr = localStorage.getItem("so_currentUser");
+    const isLoginPage = window.location.pathname.endsWith("login.html") || window.location.pathname.endsWith("login");
+
     if (!userStr) {
-      if (!window.location.pathname.endsWith("login.html")) {
-        window.location.href = "./login.html";
+      if (!isLoginPage) {
+        window.location.href = "./login";
       }
       return null;
     }
@@ -18,26 +20,24 @@ const Auth = {
       const isAdmin = user.role === "Admin";
       
       // If we are on login page, redirect to index
-      if (window.location.pathname.endsWith("login.html")) {
-        window.location.href = "./index.html";
+      if (isLoginPage) {
+        window.location.href = "./index";
+        return user;
       }
       
       // If a non-admin tries to access admin pages, redirect to index
       const isAdminPage = window.location.pathname.endsWith("user-management.html") || 
-                          window.location.pathname.endsWith("system-log.html");
-      // The following lines are added/modified based on the instruction.
-      // Note: 'isLoginPage' and 'isPublicPage' are not defined in the original context.
-      // Assuming they would be defined elsewhere or are intended to be added.
-      const isLoginPage = window.location.pathname.endsWith("login.html"); // Added for syntactic correctness
-      const isPublicPage = false; // Added for syntactic correctness, assuming no public pages for this check
-      if (!isLoginPage && !isPublicPage) {
-        window.location.href = "./login";
+                          window.location.pathname.endsWith("user-management") ||
+                          window.location.pathname.endsWith("system-log.html") ||
+                          window.location.pathname.endsWith("system-log");
+      if (isAdminPage && !isAdmin) {
+        window.location.href = "./index";
       }
 
       return user;
     } catch(e) {
       localStorage.removeItem("so_currentUser");
-      window.location.href = "./login.html";
+      if (!isLoginPage) window.location.href = "./login";
       return null;
     }
   },
