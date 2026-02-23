@@ -19,11 +19,10 @@ let rowCounter = 0;
 
 // ─── PAGE NAVIGATION ──────────────────────────────────
 function goPage(page) {
-    // In static mode, just redirect to the html file
-    let suffix = page === "index" ? "index.html" : page + ".html";
-    if (page === "product") suffix = "master-product.html";
-    if (page === "salesperson") suffix = "master-salesperson.html";
-    window.location.href = "./" + suffix;
+    let target = page === "index" ? "index" : page;
+    if (page === "product") target = "master-product";
+    if (page === "salesperson") target = "master-salesperson";
+    window.location.href = "./" + target;
 }
 
 // ─── ON PAGE LOAD ───────────────────────────────────────

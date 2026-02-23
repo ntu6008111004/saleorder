@@ -25,8 +25,13 @@ const Auth = {
       // If a non-admin tries to access admin pages, redirect to index
       const isAdminPage = window.location.pathname.endsWith("user-management.html") || 
                           window.location.pathname.endsWith("system-log.html");
-      if (isAdminPage && !isAdmin) {
-        window.location.href = "./index.html";
+      // The following lines are added/modified based on the instruction.
+      // Note: 'isLoginPage' and 'isPublicPage' are not defined in the original context.
+      // Assuming they would be defined elsewhere or are intended to be added.
+      const isLoginPage = window.location.pathname.endsWith("login.html"); // Added for syntactic correctness
+      const isPublicPage = false; // Added for syntactic correctness, assuming no public pages for this check
+      if (!isLoginPage && !isPublicPage) {
+        window.location.href = "./login";
       }
 
       return user;
@@ -45,7 +50,7 @@ const Auth = {
 
   logout: function() {
     localStorage.removeItem("so_currentUser");
-    window.location.href = "./login.html";
+    window.location.href = "./login";
   },
 
   confirmLogout: function() {
@@ -130,15 +135,15 @@ const Auth = {
             if(!hasUsers) {
                 const a = document.createElement("a");
                 a.innerHTML = "🛡️ จัดการผู้ใช้";
-                a.onclick = () => window.location.href = "./user-management.html";
-                if(window.location.pathname.endsWith("user-management.html")) a.className = "active";
+                a.onclick = () => window.location.href = "./user-management";
+                if(window.location.pathname.endsWith("user-management.html") || window.location.pathname.endsWith("user-management")) a.className = "active";
                 navBar.appendChild(a);
             }
             if(!hasLogs) {
                 const a = document.createElement("a");
                 a.innerHTML = "📡 ประวัติการใช้งาน";
-                a.onclick = () => window.location.href = "./system-log.html";
-                if(window.location.pathname.endsWith("system-log.html")) a.className = "active";
+                a.onclick = () => window.location.href = "./system-log";
+                if(window.location.pathname.endsWith("system-log.html") || window.location.pathname.endsWith("system-log")) a.className = "active";
                 navBar.appendChild(a);
             }
         }

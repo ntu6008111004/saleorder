@@ -105,7 +105,7 @@
       
       if(res.success) {
          localStorage.setItem("so_currentUser", JSON.stringify(res.data));
-         window.location.href = "./index.html";
+         window.location.href = "./index";
       } else {
          errorEl.textContent = res.error || "รหัสผ่านไม่ถูกต้อง";
          errorEl.style.display = "block";
