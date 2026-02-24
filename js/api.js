@@ -1,6 +1,6 @@
 // ─── API CONFIGURATION ────────────────────────────────
 // IMPORTANT: Replace this URL with your published Google Apps Script Web App URL
-const API_URL = "https://script.google.com/macros/s/AKfycbxy288p_FhOtHzzxswQYklj-WH0KeCHdUCqiX1mu_XDNtfTmuvK_ZzBJrmZKtR4CELEYw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzyRdfTXMP_OFOCuFzeWOiZQ4t-tkSON3DWLaEyqdFdyDhlE6eHcs2uOL9Kg0L90w27GQ/exec";
 
 // ─── PAYLOAD ENCRYPTION ─────────────────────────────────
 function encryptPayload(data) {
@@ -28,7 +28,7 @@ async function fetchAPI(action, payload = {}) {
   try {
     // Inject current user into payload for logging
     try {
-        const u = localStorage.getItem("so_currentUser");
+        const u = localStorage.getItem("so_currentUser") || sessionStorage.getItem("so_currentUser");
         if(u) payload.currentUser = JSON.parse(u);
     } catch(e) {}
 
@@ -86,6 +86,14 @@ const API = {
   getSaleOrders: () => fetchAPI("getSaleOrders"),
   getSaleOrderForPrint: async (soNumber) => {
     return await fetchAPI("getSaleOrderForPrint", { soNumber: soNumber });
+  },
+
+  updateSaleOrderStatus: async (soNumber, status) => {
+    return await fetchAPI("updateSaleOrderStatus", { soNumber: soNumber, status: status });
+  },
+
+  getSyncToken: async () => {
+    return await fetchAPI("getSyncToken");
   },
 
   saveSalesperson: async (payload) => {

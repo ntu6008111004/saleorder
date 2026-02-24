@@ -1,363 +1,673 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ระบบออกใบสั่งขาย (Sale Order)</title>
-  <link rel="stylesheet" href="./css/style.css">
-</head>
-<body>
-
-<!-- ═══ CUTE LOADING OVERLAY ═══ -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="loading-box">
-    <div class="loading-dots">
-      <div class="dot"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
-    </div>
-    <div class="loading-text" id="loadingText">กำลังดำเนินการ...</div>
-    <div class="loading-subtext" id="loadingSubtext">กรุณารอสักครู่</div>
-  </div>
-</div>
-
-<!-- ═══ TOAST CONTAINER ═══ -->
-<div class="toast-container" id="toastContainer"></div>
-
-<header class="app-header">
-  <div class="logo">📋</div>
-  <div>
-    <h1>ระบบออกใบสั่งขาย (Sale Order)</h1>
-    <p>สร้างใบสั่งขาย บันทึกข้อมูล และพิมพ์เอกสาร</p>
-  </div>
-</header>
-
-
-
-<nav class="nav-bar">
-  <a class="active">📋 สร้าง Sale Order</a>
-  <a onclick="goPage('history')">📑 ประวัติการขาย</a>
-  <a onclick="goPage('salesperson')">👥 พนักงานขาย</a>
-  <a onclick="goPage('product')">📦 สินค้า</a>
-</nav>
-
-<!-- ═══ MAIN FORM ═══ -->
-<div class="container">
-  <form id="soForm" onsubmit="event.preventDefault();">
-
-    <!-- ── ข้อมูลลูกค้า ── -->
-    <div class="card">
-      <div class="card-header">
-        <div class="icon blue">👤</div>
-        <h2>ข้อมูลลูกค้า</h2>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ระบบออกใบสั่งขาย (Sale Order)</title>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <!-- ═══ CUTE LOADING OVERLAY ═══ -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-box">
+        <div class="loading-dots">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <div class="loading-text" id="loadingText">กำลังดำเนินการ...</div>
+        <div class="loading-subtext" id="loadingSubtext">กรุณารอสักครู่</div>
       </div>
-      <div class="card-body">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>วันที่สั่งขาย</label>
-            <div class="date-input-wrapper">
-              <input type="text" id="soDate" placeholder="วว/ดด/ปปปป" maxlength="10">
-              <input type="date" class="hidden-picker" id="soDatePick">
-              <button type="button" class="picker-btn" onclick="togglePicker('soDatePick')">📅</button>
+    </div>
+
+    <!-- ═══ TOAST CONTAINER ═══ -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <header class="app-header">
+      <div class="logo">📋</div>
+      <div>
+        <h1>ระบบออกใบสั่งขาย (Sale Order)</h1>
+        <p>สร้างใบสั่งขาย บันทึกข้อมูล และพิมพ์เอกสาร</p>
+      </div>
+    </header>
+
+    <nav class="nav-bar">
+      <a class="active">📋 สร้าง Sale Order</a>
+      <a onclick="goPage('history')">📑 ประวัติการขาย</a>
+      <a onclick="goPage('salesperson')">👥 พนักงานขาย</a>
+      <a onclick="goPage('product')">📦 สินค้า</a>
+    </nav>
+
+    <!-- ═══ MAIN FORM ═══ -->
+    <div class="container">
+      <form id="soForm" onsubmit="event.preventDefault()">
+        <!-- ── ข้อมูลลูกค้า & ที่อยู่ออกบิล ── -->
+        <div class="card">
+          <div class="card-header">
+            <div class="icon blue">👤</div>
+            <h2>ชื่อลูกค้า/ บริษัท</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>วันที่สั่งขาย</label>
+                <div class="date-input-wrapper">
+                  <input
+                    type="text"
+                    id="soDate"
+                    placeholder="วว/ดด/ปปปป"
+                    maxlength="10"
+                  />
+                  <input type="date" class="hidden-picker" id="soDatePick" />
+                  <button
+                    type="button"
+                    class="picker-btn"
+                    onclick="togglePicker('soDatePick')"
+                  >
+                    📅
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>รหัสลูกค้า</label>
+                <input type="text" id="customerId" placeholder="เช่น C001" />
+              </div>
+              <div class="form-group">
+                <label
+                  >ชื่อลูกค้า / บริษัท <span style="color: var(--danger)">*</span></label
+                >
+                <input
+                  type="text"
+                  id="customerName"
+                  placeholder="ชื่อ-นามสกุล หรือ ชื่อบริษัท"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label>เลขผู้เสียภาษี (Tax ID)</label>
+                <input
+                  type="text"
+                  id="taxId"
+                  placeholder="เลขประจำตัวผู้เสียภาษี 13 หลัก"
+                  maxlength="13"
+                />
+              </div>
+              <div class="form-group">
+                <label>โทรศัพท์</label>
+                <input
+                  type="tel"
+                  id="customerPhone"
+                  placeholder="0xx-xxx-xxxx"
+                />
+              </div>
+              <div class="form-group">
+                <label>อีเมล</label>
+                <input
+                  type="email"
+                  id="customerEmail"
+                  placeholder="email@example.com"
+                  pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
+                  title="กรุณาระบุอีเมลให้ถูกต้อง ต้องมีเครื่องหมาย @"
+                />
+              </div>
+              <div class="form-group">
+                <label>ผู้ติดต่อ (Contact Person)</label>
+                <input
+                  type="text"
+                  id="contactPerson"
+                  placeholder="ชื่อผู้ติดต่อ"
+                />
+              </div>
+            </div>
+
+            <hr
+              style="margin: 24px 0; border: 0; border-top: 1px solid #e2e8f0"
+            />
+            <h3
+              style="margin-bottom: 16px; font-size: 16px; color: var(--text)"
+            >
+              ที่อยู่ออกบิล (Billing Address)
+            </h3>
+
+            <div class="form-group full-width" style="margin-bottom: 20px">
+              <div
+                style="
+                  display: flex;
+                  gap: 24px;
+                  align-items: center;
+                  flex-wrap: wrap;
+                "
+              >
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                    font-weight: 500;
+                  "
+                >
+                  <input
+                    type="radio"
+                    name="billingBranchType"
+                    id="billingHeadOffice"
+                    value="HeadOffice"
+                    checked
+                    onchange="toggleBranchInput()"
+                    style="width: 18px; height: 18px"
+                  />
+                  สำนักงานใหญ่
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                    font-weight: 500;
+                  "
+                >
+                  <input
+                    type="radio"
+                    name="billingBranchType"
+                    id="billingBranch"
+                    value="Branch"
+                    onchange="toggleBranchInput()"
+                    style="width: 18px; height: 18px"
+                  />
+                  สาขา
+                </label>
+                <div
+                  id="branchInputContainer"
+                  style="display: flex; align-items: center; gap: 8px; position: relative;"
+                >
+                  <label style="font-size: 13px; color: var(--text-secondary); white-space: nowrap;"
+                    >รหัสสาขา:</label
+                  >
+                  <input
+                    type="text"
+                    id="billingBranchCode"
+                    placeholder="ระบุสาขา 5 หลัก (เช่น 00001)"
+                    maxlength="5"
+                    pattern="[0-9]{5}"
+                    disabled
+                    oninput="validateBranchCodeRealtime(this)"
+                    style="
+                      width: 200px;
+                      padding: 8px 12px;
+                      border-radius: 8px;
+                      border: 1.5px solid #e2e8f0;
+                      transition: all 0.2s;
+                      opacity: 0.6;
+                    "
+                  />
+                  <span id="branchCodeError" style="color: #ef4444; font-size: 11.5px; display: none; position: absolute; left: 75px; top: 100%; margin-top: 4px; white-space: nowrap;">กรุณาระบุตัวเลขสิบ 5 หลัก (00000 - 00100)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label>บ้านเลขที่ / ซอย / ทับ / ถนน</label>
+                <input
+                  type="text"
+                  id="billingDetail"
+                  placeholder="เช่น 123/45 ซ.สุขุมวิท 55 ถ.สุขุมวิท"
+                />
+              </div>
+              <div class="form-group">
+                <label>ตำบล / แขวง</label>
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    id="billingDistrict"
+                    placeholder="พิมพ์เพื่อค้นหา ตำบล/แขวง"
+                    autocomplete="off"
+                  />
+                  <div class="autocomplete-list"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>อำเภอ / เขต</label>
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    id="billingAmphoe"
+                    placeholder="อำเภอ / เขต"
+                    autocomplete="off"
+                  />
+                  <div class="autocomplete-list"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>จังหวัด</label>
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    id="billingProvince"
+                    placeholder="จังหวัด"
+                    autocomplete="off"
+                  />
+                  <div class="autocomplete-list"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>รหัสไปรษณีย์</label>
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    id="billingZipcode"
+                    placeholder="รหัสไปรษณีย์"
+                    autocomplete="off"
+                  />
+                  <div class="autocomplete-list"></div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="form-group">
-            <label>รหัสลูกค้า</label>
-            <input type="text" id="customerId" placeholder="เช่น C001">
+        </div>
+
+        <!-- ── ที่อยู่จัดส่ง ── -->
+        <div class="card">
+          <div class="card-header">
+            <div class="icon orange">📦</div>
+            <h2>ที่อยู่จัดส่ง (Shipping Address)</h2>
           </div>
-          <div class="form-group">
-            <label>ชื่อลูกค้า <span style="color:var(--danger)">*</span></label>
-            <input type="text" id="customerName" placeholder="ชื่อ-นามสกุล หรือ ชื่อบริษัท" required>
+          <div class="card-body">
+            <div class="checkbox-row">
+              <input
+                type="checkbox"
+                id="sameAddress"
+                onchange="toggleSameAddress(this)"
+              />
+              <label for="sameAddress">ใช้ที่อยู่เดียวกับที่อยู่ออกบิล</label>
+            </div>
+            <div class="form-grid" style="margin-bottom: 16px">
+              <div class="form-group">
+                <label>ชื่อผู้รับ</label>
+                <input
+                  type="text"
+                  id="shippingRecipientName"
+                  placeholder="ชื่อผู้รับสินค้า"
+                />
+              </div>
+              <div class="form-group">
+                <label>เบอร์ผู้รับ</label>
+                <input
+                  type="tel"
+                  id="shippingRecipientPhone"
+                  placeholder="0xx-xxx-xxxx"
+                />
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label>บ้านเลขที่ / ซอย / ทับ / ถนน</label>
+                <input
+                  type="text"
+                  id="shippingDetail"
+                  placeholder="เช่น 123/45 ซ.สุขุมวิท 55 ถ.สุขุมวิท"
+                />
+              </div>
+              <div class="form-group">
+                <label>ตำบล / แขวง</label>
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    id="shippingDistrict"
+                    placeholder="พิมพ์เพื่อค้นหา ตำบล/แขวง"
+                    autocomplete="off"
+                  />
+                  <div class="autocomplete-list"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>อำเภอ / เขต</label>
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    id="shippingAmphoe"
+                    placeholder="อำเภอ / เขต"
+                    autocomplete="off"
+                  />
+                  <div class="autocomplete-list"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>จังหวัด</label>
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    id="shippingProvince"
+                    placeholder="จังหวัด"
+                    autocomplete="off"
+                  />
+                  <div class="autocomplete-list"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>รหัสไปรษณีย์</label>
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    id="shippingZipcode"
+                    placeholder="รหัสไปรษณีย์"
+                    autocomplete="off"
+                  />
+                  <div class="autocomplete-list"></div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>เลขผู้เสียภาษี (Tax ID)</label>
-            <input type="text" id="taxId" placeholder="เลขประจำตัวผู้เสียภาษี 13 หลัก">
+        </div>
+
+        <!-- ── ข้อมูลการขาย ── -->
+        <div class="card">
+          <div class="card-header">
+            <div class="icon purple">💼</div>
+            <h2>ข้อมูลการขาย & การจัดส่ง</h2>
           </div>
-          <div class="form-group">
-            <label>โทรศัพท์</label>
-            <input type="tel" id="customerPhone" placeholder="0xx-xxx-xxxx">
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label
+                  >พนักงานขาย <span style="color: var(--danger)">*</span></label
+                >
+                <select id="salesId" required>
+                  <option value="">-- เลือกพนักงานขาย --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>ประเภทการขาย</label>
+                <select id="paymentType" onchange="togglePaymentTerms()">
+                  <option value="">-- เลือก --</option>
+                  <option value="ขายสด">ขายสด</option>
+                  <option value="ขายเชื่อ">ขายเชื่อ</option>
+                </select>
+              </div>
+              <div
+                class="form-group"
+                id="paymentTermGroup"
+                style="display: none"
+              >
+                <label style="white-space: nowrap;">เงื่อนไขการชำระเงิน</label>
+                <select id="paymentTerm">
+                  <option value="">-- เลือก --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>วิธีการจัดส่ง</label>
+                <select id="deliveryMethod" onchange="toggleDeliveryDate()">
+                  <option value="">-- เลือก --</option>
+                  <option value="จัดส่งโดยฝ่ายขาย">จัดส่งโดยฝ่ายขาย</option>
+                  <option value="จัดส่งโดยบริษัท">จัดส่งโดยบริษัท</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>วันที่จัดส่งสินค้า</label>
+                <div class="date-input-wrapper">
+                  <input
+                    type="text"
+                    id="deliveryDate"
+                    placeholder="วว/ดด/ปปปป"
+                    maxlength="10"
+                  />
+                  <input
+                    type="date"
+                    class="hidden-picker"
+                    id="deliveryDatePick"
+                  />
+                  <button
+                    type="button"
+                    class="picker-btn"
+                    onclick="togglePicker('deliveryDatePick')"
+                  >
+                    📅
+                  </button>
+                </div>
+              </div>
+              <div class="form-group full-width">
+                <label>หมายเหตุ</label>
+                <textarea
+                  id="remarks"
+                  placeholder=""
+                  rows="4"
+                ></textarea>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>อีเมล</label>
-            <input type="email" id="customerEmail" placeholder="email@example.com">
+        </div>
+
+        <!-- ── รายการสินค้า ── -->
+        <div class="card">
+          <div class="card-header">
+            <div class="icon red">🛒</div>
+            <h2>รายการสินค้า</h2>
           </div>
-          <div class="form-group">
-            <label>ผู้ติดต่อ (Contact Person)</label>
-            <input type="text" id="contactPerson" placeholder="ชื่อผู้ติดต่อ">
+          <div class="card-body">
+            <div class="table-wrapper">
+              <table class="product-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>รหัสสินค้า</th>
+                    <th>ชื่อสินค้า</th>
+                    <th>จำนวน</th>
+                    <th>หน่วย</th>
+                    <th>ราคา/หน่วย</th>
+                    <th>ส่วนลด</th>
+                    <th>รวม</th>
+                    <th>หมายเหตุ</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="productTableBody"></tbody>
+              </table>
+            </div>
+
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 16px;">
+              <button
+                type="button"
+                class="btn-add-row"
+                onclick="addProductRow()"
+              >
+                ➕ เพิ่มรายการสินค้า
+              </button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+              <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; color: #475569; user-select: none;">
+                <input type="checkbox" id="hasDeposit" onchange="toggleDepositInput()" style="width: 18px; height: 18px; accent-color: #0284c7;" />
+                มีเงินมัดจำ (บางส่วน)
+              </label>
+              
+              <div id="depositInputContainer" style="display: none; background: #e0f2fe; padding: 12px 16px; border-radius: 8px; border: 1px dashed #38bdf8; align-items: center; gap: 16px; transition: all 0.3s ease; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="color: #0369a1; font-weight: 600; font-size: 14px;">ระบุยอดเงินมัดจำ:</span>
+                  <input
+                    type="number"
+                    id="depositAmount"
+                    value="0.00"
+                    step="0.01"
+                    style="width: 120px; text-align: right; padding: 6px 12px; font-size: 15px; font-weight: 700; color: #0284c7; border: 2px solid #bae6fd; border-radius: 6px; outline: none;"
+                    onfocus="if(this.value==='0.00'||this.value==='0')this.value=''"
+                    onblur="if(this.value==='')this.value='0.00'"
+                    oninput="calculateSummary()"
+                  />
+                  <span style="color: #0369a1; font-weight: 600; font-size: 14px;">บาท</span>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #7dd3fc; padding-left: 16px;">
+                  <span style="color: #0369a1; font-weight: 600; font-size: 14px;">แนบหลักฐาน:</span>
+                  <input type="file" id="depositProof" accept="image/*" style="width: 250px; border: 1.5px solid #bae6fd; border-radius: 6px;" onchange="handleProofUpload(this)">
+                  <input type="hidden" id="depositProofBase64">
+                  <span id="proofUploadStatus" style="font-size: 12px; color: #059669; font-weight: 600; display: none;">✅ อัปโหลดแล้ว</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="summary-box" style="margin-top: 24px">
+              <table class="summary-table">
+                <tr>
+                  <td class="label">1. มูลค่าสินค้า</td>
+                  <td class="value" id="subtotalDisplay">0.00</td>
+                  <td style="width: 30px">บาท</td>
+                </tr>
+                <tr>
+                  <td class="label">2. หักส่วนลด</td>
+                  <td class="value" id="totalDiscountDisplay">0.00</td>
+                  <td>บาท</td>
+                </tr>
+                <tr>
+                  <td class="label">3. ยอดหลังหักส่วนลด</td>
+                  <td class="value" id="afterDiscountDisplay">0.00</td>
+                  <td>บาท</td>
+                </tr>
+                <tr>
+                  <td class="label">4. หักเงินมัดจำ</td>
+                  <td class="value" id="depositDisplay">0.00</td>
+                  <td>บาท</td>
+                </tr>
+                <tr>
+                  <td class="label" style="font-weight: 600">
+                    5. จำนวนเงินรวมทั้งสิ้น (ก่อนรวมภาษี)
+                  </td>
+                  <td
+                    class="value"
+                    id="baseAmountDisplay"
+                    style="font-weight: 600"
+                  >
+                    0.00
+                  </td>
+                  <td style="font-weight: 600">บาท</td>
+                </tr>
+                <tr>
+                  <td class="label">6. จำนวนภาษีมูลค่าเพิ่ม 7.00%</td>
+                  <td class="value" id="vatAmountDisplay">0.00</td>
+                  <td>บาท</td>
+                </tr>
+                <tr class="grand-total">
+                  <td
+                    class="label"
+                    style="
+                      font-weight: 700;
+                      color: var(--text);
+                      font-size: 16px;
+                    "
+                  >
+                    7. รวมเป็นเงิน
+                  </td>
+                  <td
+                    class="value"
+                    id="grandTotal"
+                    style="font-size: 18px; color: #2563eb"
+                  >
+                    0.00
+                  </td>
+                  <td style="font-weight: 700">บาท</td>
+                </tr>
+              </table>
+            </div>
           </div>
+        </div>
+
+        <!-- ── ACTION BUTTONS ── -->
+        <div class="action-bar">
+          <button type="button" class="btn btn-secondary" onclick="resetForm()">
+            🔄 เริ่มใหม่
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            onclick="submitSaleOrder()"
+          >
+            💾 บันทึก / สร้างใบสั่งขาย
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ═══ CONFIRM MODAL ═══ -->
+    <div class="modal-backdrop" id="confirmModal">
+      <div class="modal">
+        <div class="modal-icon confirm">📋</div>
+        <h3 id="confirmTitle">ยืนยันการดำเนินการ</h3>
+        <div class="modal-desc" id="confirmDesc">
+          คุณต้องการดำเนินการนี้หรือไม่?
+        </div>
+        <div class="modal-actions">
+          <button class="btn-confirm-no" id="confirmNoBtn">ยกเลิก</button>
+          <button class="btn-confirm-yes" id="confirmYesBtn">ยืนยัน</button>
         </div>
       </div>
     </div>
 
-    <!-- ── ที่อยู่ออกบิล ── -->
-    <div class="card">
-      <div class="card-header">
-        <div class="icon green">🏠</div>
-        <h2>ที่อยู่ออกบิล (Billing Address)</h2>
-      </div>
-      <div class="card-body">
-        <div class="form-grid">
-          <div class="form-group full-width">
-            <label>บ้านเลขที่ / ซอย / ทับ / ถนน</label>
-            <input type="text" id="billingDetail" placeholder="เช่น 123/45 ซ.สุขุมวิท 55 ถ.สุขุมวิท">
-          </div>
-          <div class="form-group">
-            <label>ตำบล / แขวง</label>
-            <div class="autocomplete-wrapper">
-              <input type="text" id="billingDistrict" placeholder="พิมพ์เพื่อค้นหา ตำบล/แขวง" autocomplete="off">
-              <div class="autocomplete-list"></div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>อำเภอ / เขต</label>
-            <div class="autocomplete-wrapper">
-              <input type="text" id="billingAmphoe" placeholder="อำเภอ / เขต" autocomplete="off">
-              <div class="autocomplete-list"></div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>จังหวัด</label>
-            <div class="autocomplete-wrapper">
-              <input type="text" id="billingProvince" placeholder="จังหวัด" autocomplete="off">
-              <div class="autocomplete-list"></div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>รหัสไปรษณีย์</label>
-            <div class="autocomplete-wrapper">
-              <input type="text" id="billingZipcode" placeholder="รหัสไปรษณีย์" autocomplete="off">
-              <div class="autocomplete-list"></div>
-            </div>
-          </div>
+    <!-- ═══ SUCCESS MODAL ═══ -->
+    <div class="modal-backdrop" id="successModal">
+      <div class="modal">
+        <div class="modal-icon success">✅</div>
+        <h3>บันทึกสำเร็จเรียบร้อย!</h3>
+        <div class="modal-desc">เลขที่ใบสั่งขาย</div>
+        <div class="so-number-display" id="modalSONumber">-</div>
+        <div class="modal-desc">
+          ข้อมูลถูกบันทึกลงระบบและอยู่ในสถานะ <strong>รออนุมัติ</strong><br />
+          สามารถพิมพ์เอกสารได้หลังจากผู้จัดการอนุมัติแล้วเท่านั้นที่เมนู ประวัติการขาย
+        </div>
+        <div class="modal-actions" style="justify-content: center; gap: 16px;">
+          <button
+            class="btn btn-secondary"
+            onclick="closeModal('successModal')"
+            style="width: 120px;"
+          >
+            ปิด
+          </button>
+          <button class="btn btn-primary" onclick="newSO()" style="width: auto;">
+            ➕ สร้างใบสั่งขายใหม่
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- ── ที่อยู่จัดส่ง ── -->
-    <div class="card">
-      <div class="card-header">
-        <div class="icon orange">📦</div>
-        <h2>ที่อยู่จัดส่ง (Shipping Address)</h2>
-      </div>
-      <div class="card-body">
-        <div class="checkbox-row">
-          <input type="checkbox" id="sameAddress" onchange="toggleSameAddress(this)">
-          <label for="sameAddress">ใช้ที่อยู่เดียวกับที่อยู่ออกบิล</label>
-        </div>
-        <div class="form-grid">
-          <div class="form-group full-width">
-            <label>บ้านเลขที่ / ซอย / ทับ / ถนน</label>
-            <input type="text" id="shippingDetail" placeholder="เช่น 123/45 ซ.สุขุมวิท 55 ถ.สุขุมวิท">
-          </div>
-          <div class="form-group">
-            <label>ตำบล / แขวง</label>
-            <div class="autocomplete-wrapper">
-              <input type="text" id="shippingDistrict" placeholder="พิมพ์เพื่อค้นหา ตำบล/แขวง" autocomplete="off">
-              <div class="autocomplete-list"></div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>อำเภอ / เขต</label>
-            <div class="autocomplete-wrapper">
-              <input type="text" id="shippingAmphoe" placeholder="อำเภอ / เขต" autocomplete="off">
-              <div class="autocomplete-list"></div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>จังหวัด</label>
-            <div class="autocomplete-wrapper">
-              <input type="text" id="shippingProvince" placeholder="จังหวัด" autocomplete="off">
-              <div class="autocomplete-list"></div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>รหัสไปรษณีย์</label>
-            <div class="autocomplete-wrapper">
-              <input type="text" id="shippingZipcode" placeholder="รหัสไปรษณีย์" autocomplete="off">
-              <div class="autocomplete-list"></div>
-            </div>
-          </div>
+    <!-- ═══ CONFIRM MODAL ═══ -->
+    <div class="modal-backdrop" id="confirmModal">
+      <div class="modal">
+        <div class="modal-icon confirm">❓</div>
+        <h3 id="confirmTitle">ยืนยัน</h3>
+        <div class="modal-desc" id="confirmDesc"></div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="confirmNoBtn">ยกเลิก</button>
+          <button class="btn btn-primary" id="confirmYesBtn">ยืนยัน</button>
         </div>
       </div>
     </div>
 
-    <!-- ── ข้อมูลการขาย ── -->
-    <div class="card">
-      <div class="card-header">
-        <div class="icon purple">💼</div>
-        <h2>ข้อมูลการขาย & การจัดส่ง</h2>
-      </div>
-      <div class="card-body">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>พนักงานขาย <span style="color:var(--danger)">*</span></label>
-            <select id="salesId" required>
-              <option value="">-- เลือกพนักงานขาย --</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>เงื่อนไขการชำระเงิน</label>
-            <select id="paymentTerm">
-              <option value="">-- เลือก --</option>
-              <option value="เงินสด">เงินสด</option>
-              <option value="โอนเงิน">โอนเงิน</option>
-              <option value="เครดิต 30 วัน">เครดิต 30 วัน</option>
-              <option value="เครดิต 60 วัน">เครดิต 60 วัน</option>
-              <option value="เครดิต 90 วัน">เครดิต 90 วัน</option>
-              <option value="เช็ค">เช็ค</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>วิธีการจัดส่ง</label>
-            <select id="deliveryMethod">
-              <option value="">-- เลือก --</option>
-              <option value="จัดส่งโดยบริษัท">จัดส่งโดยบริษัท</option>
-              <option value="ลูกค้ามารับเอง">ลูกค้ามารับเอง</option>
-              <option value="ขนส่งเอกชน">ขนส่งเอกชน</option>
-              <option value="ไปรษณีย์">ไปรษณีย์</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>บริการขนส่ง (Courier)</label>
-            <input type="text" id="courier" placeholder="เช่น Kerry, Flash, J&T">
-          </div>
-          <div class="form-group">
-            <label>วันที่ส่งมอบสินค้า</label>
-            <div class="date-input-wrapper">
-              <input type="text" id="deliveryDate" placeholder="วว/ดด/ปปปป" maxlength="10">
-              <input type="date" class="hidden-picker" id="deliveryDatePick">
-              <button type="button" class="picker-btn" onclick="togglePicker('deliveryDatePick')">📅</button>
-            </div>
-          </div>
-          <div class="form-group full-width">
-            <label>หมายเหตุ / โปรโมชั่น</label>
-            <textarea id="remarks" placeholder="เช่น โปรทดลองใช้ 1 แถม 15 ชุด" rows="4"></textarea>
-          </div>
+    <!-- ═══ ERROR MODAL ═══ -->
+    <div class="modal-backdrop" id="errorModal">
+      <div class="modal">
+        <div class="modal-icon error">❌</div>
+        <h3 id="errorTitle">เกิดข้อผิดพลาด</h3>
+        <div class="modal-desc" id="errorDesc">กรุณาลองใหม่อีกครั้ง</div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeModal('errorModal')">
+            ปิด
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- ── รายการสินค้า ── -->
-    <div class="card">
-      <div class="card-header">
-        <div class="icon red">🛒</div>
-        <h2>รายการสินค้า</h2>
-      </div>
-      <div class="card-body">
-        <div class="table-wrapper">
-          <table class="product-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>รหัสสินค้า</th>
-                <th>ชื่อสินค้า</th>
-                <th>จำนวน</th>
-                <th>หน่วย</th>
-                <th>ราคา/หน่วย</th>
-                <th>ส่วนลด</th>
-                <th>รวม</th>
-                <th>หมายเหตุ</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="productTableBody"></tbody>
-          </table>
-        </div>
-
-        <button type="button" class="btn-add-row" onclick="addProductRow()">
-          ➕ เพิ่มรายการสินค้า
-        </button>
-
-        <div class="summary-box">
-          <table class="summary-table">
-            <tr>
-              <td class="label">ราคาสุทธิ (ก่อน VAT)</td>
-              <td class="value" id="totalExemptedVAT">0.00</td>
-              <td style="width:30px;">บาท</td>
-            </tr>
-            <tr>
-              <td class="label">ภาษีมูลค่าเพิ่ม 3%</td>
-              <td class="value" id="vatAmount">0.00</td>
-              <td>บาท</td>
-            </tr>
-            <tr class="grand-total">
-              <td class="label" style="font-weight:700; color:var(--text);">จำนวนเงินรวมทั้งสิ้น</td>
-              <td class="value" id="grandTotal">0.00</td>
-              <td style="font-weight:700;">บาท</td>
-            </tr>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── ACTION BUTTONS ── -->
-    <div class="action-bar">
-      <button type="button" class="btn btn-secondary" onclick="resetForm()">🔄 เริ่มใหม่</button>
-      <button type="button" class="btn btn-primary" onclick="submitSaleOrder()">💾 บันทึก / สร้างใบสั่งขาย</button>
-    </div>
-
-  </form>
-</div>
-
-<!-- ═══ CONFIRM MODAL ═══ -->
-<div class="modal-backdrop" id="confirmModal">
-  <div class="modal">
-    <div class="modal-icon confirm">📋</div>
-    <h3 id="confirmTitle">ยืนยันการดำเนินการ</h3>
-    <div class="modal-desc" id="confirmDesc">คุณต้องการดำเนินการนี้หรือไม่?</div>
-    <div class="modal-actions">
-      <button class="btn-confirm-no" id="confirmNoBtn">ยกเลิก</button>
-      <button class="btn-confirm-yes" id="confirmYesBtn">ยืนยัน</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ SUCCESS MODAL ═══ -->
-<div class="modal-backdrop" id="successModal">
-  <div class="modal">
-    <div class="modal-icon success">✅</div>
-    <h3>บันทึกสำเร็จเรียบร้อย!</h3>
-    <div class="modal-desc">เลขที่ใบสั่งขาย</div>
-    <div class="so-number-display" id="modalSONumber">-</div>
-    <div class="modal-desc">ข้อมูลถูกบันทึกลง Google Sheets เรียบร้อยแล้ว<br>คุณสามารถพิมพ์เอกสาร หรือสร้างใบใหม่ได้ทันที</div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal('successModal')">ปิด</button>
-      <button class="btn btn-success" onclick="printSO()">🖨️ พิมพ์ใบสั่งขาย</button>
-      <button class="btn btn-primary" onclick="newSO()">➕ สร้าง SO ใหม่</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ CONFIRM MODAL ═══ -->
-<div class="modal-backdrop" id="confirmModal">
-  <div class="modal">
-    <div class="modal-icon confirm">❓</div>
-    <h3 id="confirmTitle">ยืนยัน</h3>
-    <div class="modal-desc" id="confirmDesc"></div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" id="confirmNoBtn">ยกเลิก</button>
-      <button class="btn btn-primary" id="confirmYesBtn">ยืนยัน</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ ERROR MODAL ═══ -->
-<div class="modal-backdrop" id="errorModal">
-  <div class="modal">
-    <div class="modal-icon error">❌</div>
-    <h3 id="errorTitle">เกิดข้อผิดพลาด</h3>
-    <div class="modal-desc" id="errorDesc">กรุณาลองใหม่อีกครั้ง</div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal('errorModal')">ปิด</button>
-    </div>
-  </div>
-</div>
-
-<script src="./js/api.js"></script>
-<script src="./js/auth.js"></script>
-<script src="./js/app.js"></script><footer style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 12px;">
-  System Version V1.0.1
-</footer>
-</body>
+    <script src="./js/api.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/app.js"></script>
+    <footer
+      style="
+        text-align: center;
+        padding: 20px;
+        color: var(--text-muted);
+        font-size: 12px;
+      "
+    >
+      System Version V1.2.0
+    </footer>
+  </body>
 </html>

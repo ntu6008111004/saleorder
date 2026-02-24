@@ -270,9 +270,39 @@
     .product-table th:nth-child(8), .product-table td:nth-child(8) { width: 90px; } /* Total */
     .product-table th:nth-child(9), .product-table td:nth-child(9) { width: 80px; } /* Remark */
 
+    /* ─── Loading Overlay ─── */
+    .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s;
+    }
+    .loading-text {
+      font-size: 24px;
+      font-weight: 700;
+      color: #2563eb;
+      animation: bounce 1s infinite alternate;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-15px); }
+    }
+    
   </style>
 </head>
 <body>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-text">กำลังโหลดข้อมูล...</div>
+  </div>
 
   <div class="no-print">
     <button class="btn btn-print" onclick="window.print()">🖨️ พิมพ์</button>
@@ -359,19 +389,31 @@
                 <div>
                   <table class="summary-table">
                     <tr>
-                      <td class="lbl">ส่วนลด / Discount</td>
-                      <td class="val" id="totalDiscount">0.00</td>
+                      <td class="lbl">มูลค่าสินค้า / Subtotal</td>
+                      <td class="val" id="subtotalDisplay">0.00</td>
                     </tr>
                     <tr>
-                      <td class="lbl">ราคาสุทธิยกเว้นภาษี / VAT-Exempted</td>
-                      <td class="val" id="totalExemptedVAT">0.00</td>
+                      <td class="lbl">หักส่วนลด / Discount</td>
+                      <td class="val" id="totalDiscountDisplay">0.00</td>
                     </tr>
                     <tr>
-                      <td class="lbl">ภาษีมูลค่าเพิ่ม / VAT 3%</td>
-                      <td class="val" id="vatAmount">0.00</td>
+                      <td class="lbl">ยอดหลังหักส่วนลด / After Discount</td>
+                      <td class="val" id="afterDiscountDisplay">0.00</td>
+                    </tr>
+                    <tr>
+                      <td class="lbl">หักเงินมัดจำ / Deposit</td>
+                      <td class="val" id="depositDisplay">0.00</td>
+                    </tr>
+                    <tr>
+                      <td class="lbl">จำนวนเงินรวมทั้งสิ้น / Base Amount</td>
+                      <td class="val" id="baseAmountDisplay">0.00</td>
+                    </tr>
+                    <tr>
+                      <td class="lbl">จำนวนภาษีมูลค่าเพิ่ม 7.00% / VAT</td>
+                      <td class="val" id="vatAmountDisplay">0.00</td>
                     </tr>
                     <tr class="grand-total-row">
-                      <td class="lbl" style="font-weight:700;">เงินรวมทั้งสิ้น / Grand Total</td>
+                      <td class="lbl" style="font-weight:700;">รวมเป็นเงิน / Grand Total</td>
                       <td class="val" id="grandTotal">0.00</td>
                     </tr>
                   </table>
@@ -393,7 +435,7 @@
                   <span class="cond-val" id="courier">-</span>
                 </div>
                 <div class="cond-row" id="row-deliv-date">
-                  <span class="cond-lbl">วันที่ส่งมอบสินค้า</span>
+                  <span class="cond-lbl">วันที่จัดส่งสินค้า</span>
                   <span id="deliveryDate" style="font-weight:600; margin-left:14px;">-</span>
                 </div>
               </div>
@@ -617,7 +659,7 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
       const lastItemRow = tableHeadRow + items.length;
       const summaryStartRow = lastItemRow + 1;
       
-      sheet.mergeCells(`A${summaryStartRow}:F${summaryStartRow + 3}`);
+      sheet.mergeCells(`A${summaryStartRow}:F${summaryStartRow + 6}`);
       sheet.getCell(`A${summaryStartRow}`).value = "หมายเหตุ / Remarks:\n" + document.getElementById('remarksDisplay').innerText;
       sheet.getCell(`A${summaryStartRow}`).alignment = { vertical: 'top', wrapText: true };
       sheet.getCell(`A${summaryStartRow}`).border = thinBorder;
@@ -635,13 +677,16 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
         }
       };
 
-      setSummaryRow(summaryStartRow, 'ส่วนลด / Discount', document.getElementById('totalDiscount').innerText.trim());
-      setSummaryRow(summaryStartRow + 1, 'ราคาสุทธิยกเว้นภาษี', document.getElementById('totalExemptedVAT').innerText.trim());
-      setSummaryRow(summaryStartRow + 2, 'ภาษีมูลค่าเพิ่ม', document.getElementById('vatAmount').innerText.trim());
-      setSummaryRow(summaryStartRow + 3, 'เงินรวมทั้งสิ้น', document.getElementById('grandTotal').innerText.trim(), true);
+      setSummaryRow(summaryStartRow, 'มูลค่าสินค้า', document.getElementById('subtotalDisplay').innerText.trim());
+      setSummaryRow(summaryStartRow + 1, 'หักส่วนลด', document.getElementById('totalDiscountDisplay').innerText.trim());
+      setSummaryRow(summaryStartRow + 2, 'ยอดหลังหักส่วนลด', document.getElementById('afterDiscountDisplay').innerText.trim());
+      setSummaryRow(summaryStartRow + 3, 'หักเงินมัดจำ', document.getElementById('depositDisplay').innerText.trim());
+      setSummaryRow(summaryStartRow + 4, 'จำนวนเงินรวมทั้งสิ้น', document.getElementById('baseAmountDisplay').innerText.trim());
+      setSummaryRow(summaryStartRow + 5, 'ภาษีมูลค่าเพิ่ม 7.00%', document.getElementById('vatAmountDisplay').innerText.trim());
+      setSummaryRow(summaryStartRow + 6, 'รวมเป็นเงิน', document.getElementById('grandTotal').innerText.trim(), true);
 
       // --- 5. Conditions & Signatures ---
-      const condStartRow = summaryStartRow + 5;
+      const condStartRow = summaryStartRow + 8;
       sheet.getCell(`A${condStartRow}`).value = "เงื่อนไขการขาย";
       sheet.getCell(`A${condStartRow}`).font = { bold: true, underline: true };
       
@@ -653,7 +698,7 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
       setCond(condStartRow + 1, 'เงื่อนไขการชำระเงิน', document.getElementById('paymentTerm').innerText);
       setCond(condStartRow + 2, 'วิธีการจัดส่ง', document.getElementById('deliveryMethod').innerText);
       setCond(condStartRow + 3, 'บริการขนส่ง', document.getElementById('courier').innerText);
-      setCond(condStartRow + 4, 'วันที่ส่งมอบสินค้า', document.getElementById('deliveryDate').innerText);
+      setCond(condStartRow + 4, 'วันที่จัดส่งสินค้า', document.getElementById('deliveryDate').innerText);
 
       const sigStartRow = condStartRow + 8;
       
@@ -716,6 +761,13 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
 
     (async function init() {
       const soNum = getUrlParam('so');
+      const hideActions = getUrlParam('hide_actions');
+      
+      if (hideActions === 'true') {
+        const noPrintBlock = document.querySelector('.no-print');
+        if (noPrintBlock) noPrintBlock.style.display = 'none';
+      }
+      
       if (!soNum) return;
 
       try {
@@ -745,8 +797,18 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
           if (checkEmpty(h.Billing_Address)) document.getElementById('row-billing').classList.add('hidden');
 
           const shippingEl = document.getElementById('shippingAddr');
-          shippingEl.textContent = h.Shipping_Address || '-';
-          if (checkEmpty(h.Shipping_Address)) document.getElementById('row-shipping').classList.add('hidden');
+          let shipAddr = h.Shipping_Address || '';
+          // Only append if it's not already merged into the address string
+          if ((h.Shipping_Recipient_Name || h.Shipping_Recipient_Phone) && !shipAddr.includes('(')) {
+            const parts = [];
+            if (h.Shipping_Recipient_Name) parts.push(h.Shipping_Recipient_Name);
+            if (h.Shipping_Recipient_Phone) parts.push(h.Shipping_Recipient_Phone);
+            if (parts.length > 0) {
+              shipAddr += ` (${parts.join(' ')})`;
+            }
+          }
+          shippingEl.textContent = shipAddr || '-';
+          if (checkEmpty(h.Shipping_Address) && checkEmpty(h.Shipping_Recipient_Name)) document.getElementById('row-shipping').classList.add('hidden');
 
           const phoneEl = document.getElementById('phone');
           phoneEl.textContent = h.Phone || '-';
@@ -764,10 +826,16 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
           tbody.innerHTML = '';
           let totalQty = 0;
           let totalDiscount = 0;
+          let subtotalGross = 0;
 
           items.forEach((item, i) => {
-            totalQty += parseFloat(item.Qty || 0);
-            totalDiscount += parseFloat(item.Discount || 0);
+            const qty = parseFloat(item.Qty || 0);
+            const price = parseFloat(item.Unit_Price || 0);
+            const disc = parseFloat(item.Discount || 0);
+            totalQty += qty;
+            totalDiscount += Math.round((disc + Number.EPSILON) * 100) / 100;
+            subtotalGross += Math.round(((qty * price) + Number.EPSILON) * 100) / 100;
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td>${i + 1}</td>
@@ -783,12 +851,28 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
             tbody.appendChild(tr);
           });
 
-          document.getElementById('totalDiscount').textContent = formatNumber(totalDiscount);
-          document.getElementById('totalExemptedVAT').textContent = formatNumber(parseFloat(h.Total_Exempted_VAT) || (parseFloat(h.Grand_Total) / 1.03));
-          document.getElementById('vatAmount').textContent = formatNumber(h.VAT_Amount);
-          document.getElementById('grandTotal').textContent = formatNumber(h.Grand_Total);
+          let subtotalNet = subtotalGross - totalDiscount;
+          if (subtotalNet < 0) subtotalNet = 0;
+          
+          const deposit = parseFloat(h.Deposit_Amount) || 0;
+          let grandTotal = parseFloat(h.Grand_Total) || 0;
+          if (!h.Grand_Total) {
+            grandTotal = subtotalNet - deposit;
+            if (grandTotal < 0) grandTotal = 0;
+          }
 
-          const pt = h.Payment_Term;
+          const baseAmount = parseFloat(h.Base_Amount) || (grandTotal / 1.07);
+          const vatAmount = parseFloat(h.VAT_Amount) || (grandTotal - baseAmount);
+
+          document.getElementById('subtotalDisplay').textContent = formatNumber(subtotalGross);
+          document.getElementById('totalDiscountDisplay').textContent = formatNumber(totalDiscount);
+          document.getElementById('afterDiscountDisplay').textContent = formatNumber(subtotalNet);
+          document.getElementById('depositDisplay').textContent = formatNumber(deposit);
+          document.getElementById('baseAmountDisplay').textContent = formatNumber(baseAmount);
+          document.getElementById('vatAmountDisplay').textContent = formatNumber(vatAmount);
+          document.getElementById('grandTotal').textContent = formatNumber(grandTotal);
+
+          const pt = [h.Payment_Type, h.Payment_Term].filter(Boolean).join(' - ');
           document.getElementById('paymentTerm').textContent = pt || '-';
           if (checkEmpty(pt)) document.getElementById('row-payment').classList.add('hidden');
 
@@ -820,11 +904,17 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
         }
       } catch (e) {
         console.error(e);
+      } finally {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+          overlay.style.opacity = '0';
+          setTimeout(() => overlay.style.display = 'none', 300);
+        }
       }
     })();
   </script>
 <footer style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 12px;">
-  System Version V1.0.1
+  System Version V1.2.0
 </footer>
 </body>
 </html>

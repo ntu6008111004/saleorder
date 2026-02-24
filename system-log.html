@@ -23,6 +23,16 @@
     .search-box input:focus { border-color: #9333ea; box-shadow: 0 0 0 4px rgba(147,51,234,0.1); }
 
     .action-badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; background: #f3e8ff; color: #7e22ce; display:inline-block; }
+    
+    /* Override global pagination for purple theme */
+    .pagination-btn.active {
+      background: #9333ea !important;
+      border-color: #9333ea !important;
+    }
+    .pagination-btn:hover:not(:disabled) {
+      color: #9333ea !important;
+      border-color: #c084fc !important;
+    }
   </style>
 </head>
 <body>
@@ -78,7 +88,7 @@
         </table>
       </div>
 
-      <div id="pagination" class="pagination"></div>
+      <div id="pagination" class="pagination-container"></div>
     </div>
   </div>
 </div>
@@ -145,8 +155,15 @@
     container.innerHTML = '';
     if (totalPages <= 1) return;
 
+    // Previous Button
+    const prevBtn = document.createElement('button');
+    prevBtn.innerHTML = 'ก่อนหน้า';
+    prevBtn.className = 'pagination-btn';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => { currentPage--; renderTable(); window.scrollTo({top:0, behavior:'smooth'}); };
+    container.appendChild(prevBtn);
+
     for (let i = 1; i <= totalPages; i++) {
-        // limit pagination buttons to save space
         if(i !== 1 && i !== totalPages && Math.abs(i - currentPage) > 2) {
            if(i === 2 || i === totalPages - 1) {
                const span = document.createElement('span');
@@ -158,10 +175,33 @@
 
         const btn = document.createElement('button');
         btn.textContent = i;
-        btn.className = i === currentPage ? 'active' : '';
-        btn.onclick = () => { currentPage = i; renderTable(); };
+        btn.className = 'pagination-btn' + (i === currentPage ? ' active' : '');
+        btn.onclick = () => { 
+          currentPage = i; 
+          renderTable(); 
+          window.scrollTo({top:0, behavior:'smooth'});
+        };
         container.appendChild(btn);
     }
+
+    // Next Button
+    const nextBtn = document.createElement('button');
+    nextBtn.innerHTML = 'ถัดไป';
+    nextBtn.className = 'pagination-btn';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => { currentPage++; renderTable(); window.scrollTo({top:0, behavior:'smooth'}); };
+    container.appendChild(nextBtn);
+
+    // Page Info
+    const info = document.createElement('div');
+    info.className = 'pagination-info';
+    info.style.marginLeft = 'auto';
+    info.style.color = '#64748b';
+    info.style.fontSize = '12px';
+    const from = ((currentPage - 1) * itemsPerPage) + 1;
+    const to = Math.min(currentPage * itemsPerPage, allLogs.length);
+    info.textContent = `แสดง ${from}-${to} จาก ${allLogs.length} รายการ`;
+    container.appendChild(info);
   }
 
   function filterLogs() {
@@ -175,7 +215,7 @@
   window.onload = loadLogs;
 </script>
 <footer style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 12px;">
-  System Version V1.0.1
+  System Version V1.2.0
 </footer>
 </body>
 </html>

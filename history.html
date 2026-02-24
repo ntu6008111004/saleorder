@@ -26,7 +26,24 @@
     .search-box input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59,130,246,0.1); }
 
     .status-badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
-    .status-paid { background: #dcfce7; color: #15803d; }
+    .status-pending { background: #fef08a; color: #854d0e; }
+    .status-approved { background: #dcfce7; color: #15803d; }
+    .status-rejected { background: #fee2e2; color: #b91c1c; }
+
+    /* Modal styles */
+    .modal-backdrop { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
+    .modal-backdrop.show { display: flex; }
+    .modal-custom { background: white; border-radius: 12px; width: 100%; max-width: 900px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .modal-header { padding: 16px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+    .modal-title { font-size: 16px; font-weight: 700; color: #1e293b; }
+    .btn-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b; }
+    .modal-body { flex: 1; padding: 0; overflow: hidden; }
+    .modal-body iframe { width: 100%; height: 100%; border: none; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px; background: #f8fafc; }
+    
+    .btn-approve { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: 'Sarabun', sans-serif;}
+    .btn-reject { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: 'Sarabun', sans-serif;}
+    .btn-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: 'Sarabun', sans-serif;}
 
     @media (max-width:768px) {
       .data-table { font-size:12px; }
@@ -41,6 +58,38 @@
   <div class="loading-box">
     <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
     <div class="loading-text" id="loadingText">กำลังโหลดข้อมูล...</div>
+  </div>
+</div>
+
+<!-- Confirm Action Modal (Modern) -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal-custom" style="max-width: 400px; height: auto; text-align: center; border-radius: 20px; padding: 30px; margin: auto;">
+    <div style="font-size: 60px; margin-bottom: 20px;" id="confirmIcon">❓</div>
+    <h3 id="confirmTitle" style="color:var(--text); font-size:20px; margin-bottom: 12px; font-weight: 700;">ยืนยันการทำรายการ</h3>
+    <p id="confirmMsg" style="color:var(--text-light); margin-bottom: 24px; line-height: 1.6; font-size: 15px;"></p>
+    <div style="display: flex; gap: 12px; width: 100%;">
+      <button class="btn-reject" id="confirmBtnNo" style="flex: 1; padding: 12px; border-radius: 12px; margin: 0;">ยกเลิก</button>
+      <button class="btn-approve" id="confirmBtnYes" style="flex: 1; padding: 12px; border-radius: 12px; margin: 0;">ตกลง</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="previewModal" onclick="if(event.target===this) closePreview()">
+  <div class="modal-custom">
+    <div class="modal-header">
+      <div class="modal-title" id="previewTitle">ตรวจสอบใบสั่งขาย</div>
+      <button class="btn-close" onclick="closePreview()">✕</button>
+    </div>
+    <div class="modal-body" style="position: relative;">
+      <div id="previewLoader" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;">
+        <div class="loading-dots" style="margin-bottom: 10px;"><div class="dot" style="background:var(--primary)"></div><div class="dot" style="background:var(--primary)"></div><div class="dot" style="background:var(--primary)"></div></div>
+        <div style="color: var(--primary); font-weight: 600; font-size: 14px;">กำลังโหลดข้อมูลเอกสาร...</div>
+      </div>
+      <iframe id="previewFrame" src="" onload="document.getElementById('previewLoader').style.display='none'"></iframe>
+    </div>
+    <div class="modal-footer" id="previewFooter">
+      <!-- dynamic buttons -->
+    </div>
   </div>
 </div>
 
@@ -79,6 +128,7 @@
               <th>ชื่อลูกค้า</th>
               <th>พนักงานขาย</th>
               <th style="text-align:right;">ยอดรวมสุทธิ</th>
+              <th style="text-align:center;">สถานะ</th>
               <th style="text-align:center;">จัดการ</th>
             </tr>
           </thead>
@@ -93,12 +143,41 @@
   </div>
 </div>
 
+<!-- Preview Modal -->
+<div class="modal-backdrop" id="previewModal">
+  <!-- existing modal content remains exactly where it is further down, assuming it's below. Ah wait, let's just add the Proof Modal here -->
+</div>
+
+<!-- Proof View Modal -->
+<div class="modal-backdrop" id="proofModal" onclick="if(event.target===this) closeProof()">
+  <div class="modal preview-modal" style="max-width: 600px;">
+    <div class="modal-header">
+      <h3 id="proofTitle" style="color:var(--text); font-size:18px;">หลักฐานการโอนเงิน (สลิป)</h3>
+      <button class="btn-close-modal" onclick="closeProof()">✕</button>
+    </div>
+    <div class="modal-body" style="text-align: center; padding: 20px; overflow-y: auto; max-height: 70vh;">
+      <img id="proofImage" src="" alt="Deposit Proof" style="max-width: 100%; max-height: 65vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    </div>
+    </div>
+  </div>
+</div>
 <script src="./js/api.js"></script>
 <script>
   let allOrders = [];
   let currentPage = 1;
   const itemsPerPage = 10;
-
+  document.addEventListener('DOMContentLoaded', () => {
+    Auth.checkAuth();
+    loadOrders();
+    
+    window.addEventListener('so_orders_updated', (e) => {
+       const newOrders = e.detail || [];
+       if (JSON.stringify(newOrders) !== JSON.stringify(allOrders)) {
+          allOrders = newOrders;
+          renderTable();
+       }
+    });
+  });
   function formatDate(val) {
     if (!val) return '-';
     if (typeof val === 'string' && val.indexOf('T') !== -1 && val.indexOf('Z') !== -1) {
@@ -121,6 +200,8 @@
       if (result.success) {
         allOrders = result.data || [];
         renderTable();
+        
+        // Menu visibility is now handled globally in Auth.checkAuth()
       }
     } catch (e) {
       console.error(e);
@@ -145,20 +226,46 @@
     tbody.innerHTML = '';
 
     if (paginated.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px; color:#64748b;">ไม่พบข้อมูลการขาย</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px; color:#64748b;">ไม่พบข้อมูลการขาย</td></tr>';
       return;
     }
 
+    const currentUser = Auth.getCurrentUser();
+    const isManager = currentUser && currentUser.role === 'Manager';
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+
     paginated.forEach(o => {
+      const status = o.Status || 'Pending';
+      let statusClass = 'status-pending';
+      let statusText = 'รออนุมัติ';
+      
+      if(status === 'Approved') { statusClass = 'status-approved'; statusText = 'อนุมัติแล้ว'; }
+      else if(status === 'Rejected') { statusClass = 'status-rejected'; statusText = 'ไม่อนุมัติ'; }
+
+      let actionBtn = '';
+      if (status === 'Approved') {
+         actionBtn = `<button class="btn-print" onclick="printOrder('${o.SO_Number}')">🖨️ พิมพ์</button>`;
+      } else {
+         // Show preview for Pending / Rejected
+         actionBtn = `<button class="btn-primary" onclick="openPreview('${o.SO_Number}')" style="padding:6px 12px; font-size:12px; background-color: ${status === 'Rejected' ? '#ef4444' : '#0284c7'};">🔍 ดูข้อมูล</button>`;
+      }
+
+      let proofBtn = '';
+      if (o.Deposit_Proof_Base64) {
+         proofBtn = `<button class="btn-secondary" onclick="viewProof('${o.SO_Number}', '${o.Deposit_Proof_Base64}')" style="padding:6px 12px; font-size:12px; margin-top:4px;">🖼️ ดูหลักฐาน</button>`;
+      }
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${formatDate(o.SO_Date)}</td>
         <td style="font-weight:700; color:#2563eb;">${o.SO_Number}</td>
         <td>${o.Customer_Name || '-'}</td>
         <td>${o.Sales_Name || o.Sales_ID || '-'}</td>
-        <td style="text-align:right; font-weight:700;">${parseFloat(o.Grand_Total || 0).toLocaleString()}</td>
-        <td style="text-align:center;">
-          <button class="btn-print" onclick="printOrder('${o.SO_Number}')">🖨️ พิมพ์</button>
+        <td style="text-align:right; font-weight:700;">${parseFloat(o.Grand_Total || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+        <td style="text-align:center;"><span class="status-badge ${statusClass}">${statusText}</span></td>
+        <td style="text-align:center; display: flex; flex-direction: column; gap: 4px; align-items: center;">
+          ${actionBtn}
+          ${proofBtn}
         </td>
       `;
       tbody.appendChild(tr);
@@ -193,6 +300,118 @@
     window.open('print-template.html?so=' + so, '_blank');
   }
 
+  // --- Manager Preview & Approval Logic ---
+  let currentPreviewSO = null;
+  
+  function openPreview(so) {
+    currentPreviewSO = so;
+    const order = allOrders.find(o => o.SO_Number === so);
+    if (!order) return;
+    
+    document.getElementById('previewTitle').textContent = `ตรวจสอบใบสั่งขาย: ${so}`;
+    
+    // Pass a parameter to hide action buttons inside the iframe if not approved
+    const status = order.Status || 'Pending';
+    const iframeUrl = `print-template.html?so=${so}${status !== 'Approved' ? '&hide_actions=true' : ''}`;
+    
+    // Show loader and set iframe url
+    document.getElementById('previewLoader').style.display = 'flex';
+    document.getElementById('previewFrame').src = iframeUrl;
+    
+    const footer = document.getElementById('previewFooter');
+    footer.innerHTML = '';
+    
+    const currentUser = Auth.getCurrentUser();
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isManager = currentUser && currentUser.role === 'Manager';
+    
+    if ((isAdmin || isManager) && status === 'Pending') {
+      footer.innerHTML = `
+        <button class="btn-reject" onclick="updateOrderStatus('${so}', 'Rejected')">❌ ไม่อนุมัติ</button>
+        <button class="btn-approve" onclick="updateOrderStatus('${so}', 'Approved')">✅ อนุมัติ</button>
+      `;
+    } else {
+      footer.innerHTML = `<button class="btn-print" onclick="closePreview()" style="font-size:14px; padding:8px 16px;">ปิดหน้าต่าง</button>`;
+    }
+    
+    document.getElementById('previewModal').classList.add('show');
+  }
+  
+  function closePreview() {
+    document.getElementById('previewModal').classList.remove('show');
+    document.getElementById('previewFrame').src = '';
+    currentPreviewSO = null;
+  }
+  
+  function viewProof(so, base64Data) {
+    document.getElementById('proofTitle').textContent = `หลักฐานการโอนเงิน - ${so}`;
+    document.getElementById('proofImage').src = base64Data;
+    document.getElementById('proofModal').classList.add('show');
+  }
+
+  function closeProof() {
+    document.getElementById('proofModal').classList.remove('show');
+    document.getElementById('proofImage').src = '';
+  }
+  
+  function showConfirm(title, msg, icon, onConfirm) {
+    const modal = document.getElementById('confirmModal');
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMsg').textContent = msg;
+    document.getElementById('confirmIcon').textContent = icon || '❓';
+    
+    const btnYes = document.getElementById('confirmBtnYes');
+    const btnNo = document.getElementById('confirmBtnNo');
+    
+    const cleanup = () => {
+      modal.classList.remove('show');
+    };
+    
+    btnYes.onclick = () => { cleanup(); onConfirm(); };
+    btnNo.onclick = cleanup;
+    
+    modal.classList.add('show');
+  }
+
+  async function updateOrderStatus(so, newStatus) {
+    const actionText = newStatus === 'Approved' ? 'อนุมัติ' : 'ไม่อนุมัติ';
+    const icon = newStatus === 'Approved' ? '✅' : '❌';
+    
+    // 1. Close preview first as requested
+    closePreview();
+
+    // 2. Delay slightly to let the first modal fade out (optional but cleaner)
+    setTimeout(() => {
+      showConfirm(
+        `ยืนยันการ${actionText}`,
+        `คุณต้องการ ${actionText} ใบสั่งขาย ${so} ใช่หรือไม่?`,
+        icon,
+        async () => {
+          showLoading(); // Show loading overlay on main page
+          try {
+            const res = await API.updateSaleOrderStatus(so, newStatus);
+            
+            if (res.success) {
+              const ord = allOrders.find(o => o.SO_Number === so);
+              if (ord) ord.Status = newStatus;
+              
+              renderTable();
+              // Show success notification
+              Auth.showNotification('สำเร็จ', `ทำรายการ ${actionText} ใบสั่งขาย ${so} เรียบร้อยแล้ว`, '🎉');
+            } else {
+              Auth.showNotification('เกิดข้อผิดพลาด', res.message || res.error, '❌');
+            }
+          } catch(e) {
+            console.error(e);
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย');
+          } finally {
+            hideLoading();
+          }
+        }
+      );
+    }, 100);
+  }
+
   function goPage(page) {
     if (page === 'index') window.location.href = 'index.html';
     if (page === 'salesperson') window.location.href = 'master-salesperson.html';
@@ -202,11 +421,10 @@
   function showLoading() { document.getElementById('loadingOverlay').classList.add('show'); }
   function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
 
-  window.onload = loadOrders;
 </script>
 <script src="./js/auth.js"></script>
 <footer style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 12px;">
-  System Version V1.0.1
+  System Version V1.2.0
 </footer>
 </body>
 </html>

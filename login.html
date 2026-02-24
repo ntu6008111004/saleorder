@@ -80,8 +80,12 @@
       <label>รหัสผ่าน (PIN)</label>
       <input type="password" id="pin" placeholder="••••" required>
     </div>
+    <div style="display: flex; flex-direction: row; align-items: center; justify-content: flex-start; margin-bottom: 20px; outline: none;">
+      <input type="checkbox" id="rememberMe" style="width: 18px; height: 18px; margin: 0 10px 0 0; cursor: pointer;">
+      <label for="rememberMe" style="margin: 0; font-weight: normal; cursor: pointer; color: var(--text-light); font-size: 14px; display: inline-block;">จดจำการเข้าสู่ระบบ</label>
+    </div>
     <div class="error-msg" id="errorMsg"></div>
-    <button type="submit" class="btn btn-primary">เข้าสู่ระบบ</button>
+    <button type="submit" class="btn btn-primary" style="justify-content: center;">เข้าสู่ระบบ</button>
   </form>
 </div>
 
@@ -104,7 +108,14 @@
       overlay.classList.remove("show");
       
       if(res.success) {
-         localStorage.setItem("so_currentUser", JSON.stringify(res.data));
+         const remember = document.getElementById("rememberMe").checked;
+         const userData = JSON.stringify(res.data);
+         if (remember) {
+             localStorage.setItem("so_currentUser", userData);
+         } else {
+             sessionStorage.setItem("so_currentUser", userData);
+             localStorage.removeItem("so_currentUser"); // Ensure no stray login remains
+         }
          window.location.href = "./index.html";
       } else {
          errorEl.textContent = res.error || "รหัสผ่านไม่ถูกต้อง";
@@ -118,7 +129,7 @@
   }
 </script>
 <footer style="text-align:center; padding: 20px; color: rgba(255,255,255,0.7); font-size: 12px;">
-  System Version V1.0.1
+  System Version V1.2.0
 </footer>
 </body>
 </html>

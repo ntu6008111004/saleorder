@@ -19,10 +19,10 @@ let rowCounter = 0;
 
 // ─── PAGE NAVIGATION ──────────────────────────────────
 function goPage(page) {
-    let target = page === "index" ? "index.html" : page + ".html";
-    if (page === "product") target = "master-product.html";
-    if (page === "salesperson") target = "master-salesperson.html";
-    window.location.href = "./" + target;
+  let target = page === "index" ? "index.html" : page + ".html";
+  if (page === "product") target = "master-product.html";
+  if (page === "salesperson") target = "master-salesperson.html";
+  window.location.href = "./" + target;
 }
 
 // ─── ON PAGE LOAD ───────────────────────────────────────
@@ -34,18 +34,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
 function initDatePickers() {
   const pairs = [
-    { text: 'soDate', pick: 'soDatePick' },
-    { text: 'deliveryDate', pick: 'deliveryDatePick' }
+    { text: "soDate", pick: "soDatePick" },
+    { text: "deliveryDate", pick: "deliveryDatePick" },
   ];
 
-  pairs.forEach(p => {
+  pairs.forEach((p) => {
     const textEl = document.getElementById(p.text);
     const pickEl = document.getElementById(p.pick);
     if (!textEl || !pickEl) return;
 
-    pickEl.addEventListener('change', function() {
+    pickEl.addEventListener("change", function () {
       if (!this.value) return;
-      const [y, m, d] = this.value.split('-');
+      const [y, m, d] = this.value.split("-");
       const beYear = parseInt(y) + 543;
       textEl.value = `${d}/${m}/${beYear}`;
     });
@@ -68,21 +68,23 @@ function setDefaultDate() {
   const mm = ("0" + (today.getMonth() + 1)).slice(-2);
   const dd = ("0" + today.getDate()).slice(-2);
   const dateInput = document.getElementById("soDate");
-  if(dateInput) dateInput.value = dd + "/" + mm + "/" + beYear;
+  if (dateInput) dateInput.value = dd + "/" + mm + "/" + beYear;
 }
 
 // ─── LOAD MASTER DATA ───────────────────────────────────
 async function loadMasterData() {
-  const isIndex = !!document.getElementById('salesId');
+  const isIndex = !!document.getElementById("salesId");
   if (!isIndex) return;
 
-  console.log("Starting master data load...");
-  showLoading("กำลังเตรียมระบบ...", "กรุณารอสักครู่ ระบบกำลังโหลดข้อมูลพื้นฐานจากเซิร์ฟเวอร์");
+  if (!isIndex) return;
+  showLoading(
+    "กำลังเตรียมระบบ...",
+    "กรุณารอสักครู่ ระบบกำลังโหลดข้อมูลพื้นฐานจากเซิร์ฟเวอร์",
+  );
 
   let isDone = false;
   const safetyTimer = setTimeout(function () {
     if (!isDone) {
-      console.warn("Loading took too long. Force closing overlay.");
       hideLoading();
       if (rowCounter === 0) addProductRow();
       showToast("การดึงข้อมูลล่าช้า อาจมีปัญหาการเชื่อมต่อ", "warning");
@@ -92,9 +94,18 @@ async function loadMasterData() {
   try {
     // Load all data in parallel
     const [spRes, prRes, addrRes] = await Promise.all([
-      API.getSalespersons().catch(e => { console.error("Salespersons error:", e); return { success: false, error: e.message }; }),
-      API.getProducts().catch(e => { console.error("Products error:", e); return { success: false, error: e.message }; }),
-      API.getThaiAddressDB().catch(e => { console.error("Address DB error:", e); return { success: false, error: e.message }; })
+      API.getSalespersons().catch((e) => {
+        console.error("Salespersons error:", e);
+        return { success: false, error: e.message };
+      }),
+      API.getProducts().catch((e) => {
+        console.error("Products error:", e);
+        return { success: false, error: e.message };
+      }),
+      API.getThaiAddressDB().catch((e) => {
+        console.error("Address DB error:", e);
+        return { success: false, error: e.message };
+      }),
     ]);
 
     isDone = true;
@@ -103,7 +114,6 @@ async function loadMasterData() {
     // 1. Process Salespersons
     if (spRes && spRes.success && Array.isArray(spRes.data)) {
       masterSalespersons = spRes.data;
-      console.log("Loaded salespersons:", masterSalespersons.length);
     } else {
       console.error("Failed to load salespersons:", spRes);
       showToast("⚠️ โหลดพนักงานขายไม่สำเร็จ", "error");
@@ -113,7 +123,6 @@ async function loadMasterData() {
     // 2. Process Products
     if (prRes && prRes.success && Array.isArray(prRes.data)) {
       masterProducts = prRes.data;
-      console.log("Loaded products:", masterProducts.length);
     } else {
       console.error("Failed to load products:", prRes);
       showToast("⚠️ โหลดข้อมูลสินค้าไม่สำเร็จ", "error");
@@ -122,13 +131,18 @@ async function loadMasterData() {
     // 3. Process Address Data
     if (addrRes && addrRes.success && Array.isArray(addrRes.data)) {
       thaiAddressDB = addrRes.data;
-      console.log("✅ Loaded address database:", thaiAddressDB.length, "items");
-      if (thaiAddressDB.length > 0) {
-        console.log("📍 Address Sample [0]:", JSON.stringify(thaiAddressDB[0]));
-        if (thaiAddressDB[0]._t) console.log("🕒 Backend Data Timestamp:", thaiAddressDB[0]._t);
-      }
-      initAddressAutocomplete("billingDistrict", "billingAmphoe", "billingProvince", "billingZipcode");
-      initAddressAutocomplete("shippingDistrict", "shippingAmphoe", "shippingProvince", "shippingZipcode");
+      initAddressAutocomplete(
+        "billingDistrict",
+        "billingAmphoe",
+        "billingProvince",
+        "billingZipcode",
+      );
+      initAddressAutocomplete(
+        "shippingDistrict",
+        "shippingAmphoe",
+        "shippingProvince",
+        "shippingZipcode",
+      );
     } else {
       console.error("Failed to load address data:", addrRes);
       showToast("⚠️ โหลดสมุดรายนามที่อยู่ไม่สำเร็จ", "error");
@@ -136,7 +150,6 @@ async function loadMasterData() {
 
     hideLoading();
     if (rowCounter === 0) addProductRow();
-
   } catch (err) {
     console.error("Fatal data loading error:", err);
     isDone = true;
@@ -149,7 +162,7 @@ async function loadMasterData() {
 // ─── SALESPERSON DROPDOWN ───────────────────────────────
 function populateSalespersonDropdown() {
   const sel = document.getElementById("salesId");
-  if(!sel) return;
+  if (!sel) return;
   sel.innerHTML = '<option value="">-- เลือกพนักงานขาย --</option>';
   masterSalespersons.forEach(function (sp) {
     const opt = document.createElement("option");
@@ -223,7 +236,11 @@ function initAddressAutocomplete(districtId, amphoeId, provinceId, zipcodeId) {
           listEl.classList.remove("show");
 
           // If "Same as Billing" is checked and we are editing billing, update shipping too
-          if (sameAddressCheck && sameAddressCheck.checked && currentId.indexOf("billing") === 0) {
+          if (
+            sameAddressCheck &&
+            sameAddressCheck.checked &&
+            currentId.indexOf("billing") === 0
+          ) {
             toggleSameAddress(sameAddressCheck);
           }
         });
@@ -247,6 +264,52 @@ function toggleSameAddress(checkbox) {
       const dst = document.getElementById("shipping" + f);
       if (src && dst) dst.value = src.value;
     });
+    // Also clear or set Name/Phone if needed, though they aren't on billing.
+    // Usually "same address" just applies to the address parts.
+  }
+}
+
+// ─── BRANCH AND PAYMENT DOM LOGIC ───────────────────────
+function toggleBranchInput() {
+  const isBranch = document.getElementById("billingBranch").checked;
+  const branchInput = document.getElementById("billingBranchCode");
+  if (isBranch) {
+    branchInput.disabled = false;
+    branchInput.style.opacity = "1";
+    branchInput.focus();
+  } else {
+    branchInput.disabled = true;
+    branchInput.style.opacity = "0.6";
+    branchInput.value = "";
+    branchInput.style.borderColor = "#e2e8f0";
+    const errEl = document.getElementById("branchCodeError");
+    if (errEl) errEl.style.display = "none";
+  }
+}
+
+function togglePaymentTerms() {
+  const type = document.getElementById("paymentType").value;
+  const termGroup = document.getElementById("paymentTermGroup");
+  const termSelect = document.getElementById("paymentTerm");
+
+  if (type === "") {
+    termGroup.style.display = "none";
+    termSelect.innerHTML = '<option value="">-- เลือก --</option>';
+  } else {
+    termGroup.style.display = "flex";
+    termSelect.innerHTML = '<option value="">-- เลือก --</option>';
+    if (type === "ขายสด") {
+      termSelect.innerHTML += '<option value="เงินสด">เงินสด</option>';
+      termSelect.innerHTML += '<option value="บัตรเครดิต">บัตรเครดิต</option>';
+      termSelect.innerHTML += '<option value="เงินโอน">เงินโอน</option>';
+    } else if (type === "ขายเชื่อ") {
+      termSelect.innerHTML +=
+        '<option value="เครดิต 30 วัน">เครดิต 30 วัน</option>';
+      termSelect.innerHTML +=
+        '<option value="เครดิต 60 วัน">เครดิต 60 วัน</option>';
+      termSelect.innerHTML +=
+        '<option value="เครดิต 90 วัน">เครดิต 90 วัน</option>';
+    }
   }
 }
 
@@ -254,7 +317,7 @@ function toggleSameAddress(checkbox) {
 function addProductRow() {
   rowCounter++;
   const tbody = document.getElementById("productTableBody");
-  if(!tbody) return;
+  if (!tbody) return;
   const tr = document.createElement("tr");
   tr.setAttribute("data-row", rowCounter);
 
@@ -320,7 +383,7 @@ function positionFloatDropdown(input) {
   var dd = getProductFloatEl();
   var rect = input.getBoundingClientRect();
   dd.style.left = rect.left + "px";
-  dd.style.top  = rect.bottom + "px";
+  dd.style.top = rect.bottom + "px";
   dd.style.width = rect.width + "px";
 }
 
@@ -344,18 +407,26 @@ function renderProductList(list, query) {
   list.innerHTML = "";
   const filtered = masterProducts.filter(function (p) {
     if (!query) return true;
-    return (p.Product_Code + " " + p.Product_Name).toLowerCase().indexOf(query) !== -1;
+    return (
+      (p.Product_Code + " " + p.Product_Name).toLowerCase().indexOf(query) !==
+      -1
+    );
   });
   if (filtered.length === 0) {
-    list.innerHTML = '<div style="padding:10px 14px;color:#94a3b8;font-size:13px;">ไม่พบสินค้า</div>';
+    list.innerHTML =
+      '<div style="padding:10px 14px;color:#94a3b8;font-size:13px;">ไม่พบสินค้า</div>';
     return;
   }
   filtered.forEach(function (p) {
     const div = document.createElement("div");
     div.className = "search-select-item";
     div.innerHTML =
-      '<span class="code">' + p.Product_Code + '</span>' +
-      '<span class="name">' + p.Product_Name + "</span>";
+      '<span class="code">' +
+      p.Product_Code +
+      "</span>" +
+      '<span class="name">' +
+      p.Product_Name +
+      "</span>";
     div.addEventListener("click", function (e) {
       e.stopPropagation();
       selectProduct(p);
@@ -370,7 +441,8 @@ function selectProduct(product) {
   var row = wrapper.closest("tr");
   var hidden = wrapper.querySelector(".product-select-value");
 
-  _activeProductInput.value = product.Product_Code + " - " + product.Product_Name;
+  _activeProductInput.value =
+    product.Product_Code + " - " + product.Product_Name;
   hidden.value = product.Product_Code;
 
   row.querySelector(".product-name").value = product.Product_Name || "";
@@ -396,7 +468,12 @@ function selectProduct(product) {
 
 document.addEventListener("click", function (e) {
   // Close floating product dropdown
-  if (_activeProductInput && !e.target.closest(".search-select-wrapper") && e.target !== _productFloatEl && !_productFloatEl.contains(e.target)) {
+  if (
+    _activeProductInput &&
+    !e.target.closest(".search-select-wrapper") &&
+    e.target !== _productFloatEl &&
+    !_productFloatEl.contains(e.target)
+  ) {
     var dd = getProductFloatEl();
     dd.style.display = "none";
     _activeProductInput = null;
@@ -409,13 +486,19 @@ document.addEventListener("click", function (e) {
 });
 
 // Reposition dropdown on scroll
-window.addEventListener("scroll", function () {
-  if (_activeProductInput && _productFloatEl && _productFloatEl.style.display !== "none") {
-    positionFloatDropdown(_activeProductInput);
-  }
-}, true);
-
-
+window.addEventListener(
+  "scroll",
+  function () {
+    if (
+      _activeProductInput &&
+      _productFloatEl &&
+      _productFloatEl.style.display !== "none"
+    ) {
+      positionFloatDropdown(_activeProductInput);
+    }
+  },
+  true,
+);
 
 function removeProductRow(btn) {
   const tbody = document.getElementById("productTableBody");
@@ -440,26 +523,56 @@ function calculateRowTotal(inputEl) {
   const qty = parseFloat(row.querySelector(".qty").value) || 0;
   const price = parseFloat(row.querySelector(".unit-price").value) || 0;
   const discount = parseFloat(row.querySelector(".discount").value) || 0;
-  let total = qty * price - discount;
+  let total = round2(qty * price - discount);
   if (total < 0) total = 0;
   row.querySelector(".total-display").textContent = formatNumber(total);
   calculateSummary();
 }
 
+function round2(num) {
+  return Math.round((num + Number.EPSILON) * 100) / 100;
+}
+
 function calculateSummary() {
   const tbody = document.getElementById("productTableBody");
-  if(!tbody) return;
+  if (!tbody) return;
   const rows = tbody.rows;
-  let subtotal = 0;
+
+  let subtotalGross = 0;
+  let totalDiscount = 0;
+
   for (let i = 0; i < rows.length; i++) {
-    const txt = rows[i].querySelector(".total-display").textContent;
-    subtotal += parseFloat(txt.replace(/,/g, "")) || 0;
+    const qty = parseFloat(rows[i].querySelector(".qty").value) || 0;
+    const price = parseFloat(rows[i].querySelector(".unit-price").value) || 0;
+    const discount = parseFloat(rows[i].querySelector(".discount").value) || 0;
+    subtotalGross += round2(qty * price);
+    totalDiscount += round2(discount);
   }
-  const vat = subtotal * 0.03;
-  const grand = subtotal + vat;
-  document.getElementById("totalExemptedVAT").textContent = formatNumber(subtotal);
-  document.getElementById("vatAmount").textContent = formatNumber(vat);
-  document.getElementById("grandTotal").textContent = formatNumber(grand);
+
+  let subtotalNet = subtotalGross - totalDiscount;
+  if (subtotalNet < 0) subtotalNet = 0;
+
+  const deposit =
+    parseFloat(document.getElementById("depositAmount").value) || 0;
+  let grandTotal = round2(subtotalNet - deposit);
+  if (grandTotal < 0) grandTotal = 0;
+
+  // Base Amount before VAT = Grand Total / 1.07
+  const baseAmount = round2(grandTotal / 1.07);
+  const vatAmount = round2(grandTotal - baseAmount);
+
+  const setIfExist = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = formatNumber(val);
+  };
+
+  setIfExist("subtotalDisplay", subtotalGross);
+  setIfExist("totalDiscountDisplay", totalDiscount);
+  setIfExist("afterDiscountDisplay", subtotalNet);
+  setIfExist("depositDisplay", deposit);
+  setIfExist("baseAmountDisplay", baseAmount);
+  setIfExist("vatAmountDisplay", vatAmount);
+  setIfExist("grandTotal", grandTotal);
 }
 
 function formatNumber(num) {
@@ -467,6 +580,31 @@ function formatNumber(num) {
 }
 
 // ─── VALIDATE FORM ──────────────────────────────────────
+function validateBranchCodeRealtime(el) {
+  if (!el) return true;
+  const branchType = document.querySelector('input[name="billingBranchType"]:checked');
+  if (!branchType || branchType.value !== "Branch") {
+    el.style.borderColor = "#e2e8f0";
+    const errEl = document.getElementById("branchCodeError");
+    if (errEl) errEl.style.display = "none";
+    return true;
+  }
+  
+  const val = el.value.trim();
+  const num = parseInt(val, 10);
+  const errEl = document.getElementById("branchCodeError");
+  
+  if (val.length !== 5 || isNaN(num) || num < 0 || num > 100) {
+    el.style.borderColor = "#ef4444"; // Red border
+    if (errEl) errEl.style.display = "block";
+    return false;
+  } else {
+    el.style.borderColor = "#10b981"; // Green border for success
+    if (errEl) errEl.style.display = "none";
+    return true;
+  }
+}
+
 function validateForm() {
   const required = [
     { id: "customerName", label: "ชื่อลูกค้า" },
@@ -477,6 +615,16 @@ function validateForm() {
     if (!el.value.trim()) {
       showToast("กรุณากรอก: " + required[i].label, "error");
       el.focus();
+      return false;
+    }
+  }
+  
+  const branchType = document.querySelector('input[name="billingBranchType"]:checked');
+  if (branchType && branchType.value === "Branch") {
+    const branchCodeEl = document.getElementById("billingBranchCode");
+    if (!validateBranchCodeRealtime(branchCodeEl)) {
+      showToast("กรุณาระบุรหัสสาขาให้ถูกต้อง (00000 - 00100)", "error");
+      branchCodeEl.focus();
       return false;
     }
   }
@@ -514,14 +662,18 @@ function submitSaleOrder() {
     "ยกเลิก ตรวจสอบอีกครั้ง",
     function () {
       doSave();
-    }
+    },
   );
 }
 
 async function doSave() {
   showLoading("กำลังบันทึกใบสั่งขาย...", "ระบบกำลังส่งข้อมูลไปยังฐานข้อมูล");
 
+  const billingBranchType = document.querySelector('input[name="billingBranchType"]:checked').value;
+  const billingBranchCode = billingBranchType === "Branch" ? document.getElementById("billingBranchCode").value : "00000";
+
   const billingParts = [
+    billingBranchType === "Branch" ? `(สาขา ${billingBranchCode})` : "(สำนักงานใหญ่)",
     document.getElementById("billingDetail").value,
     "ต." + document.getElementById("billingDistrict").value,
     "อ." + document.getElementById("billingAmphoe").value,
@@ -541,11 +693,18 @@ async function doSave() {
     "จ." + document.getElementById("shippingProvince").value,
     document.getElementById("shippingZipcode").value,
   ];
+  const recipientName = document.getElementById("shippingRecipientName").value.trim();
+  const recipientPhone = document.getElementById("shippingRecipientPhone").value.trim();
+  let shipSuffix = "";
+  if (recipientName || recipientPhone) {
+    shipSuffix = ` (${recipientName}${recipientName && recipientPhone ? ' ' : ''}${recipientPhone})`;
+  }
+
   const shippingAddress = shippingParts
     .filter(function (p) {
       return p && p !== "ต." && p !== "อ." && p !== "จ.";
     })
-    .join(" ");
+    .join(" ") + (shipSuffix ? " " + shipSuffix : "");
 
   const items = [];
   const rows = document.getElementById("productTableBody").rows;
@@ -560,7 +719,9 @@ async function doSave() {
       Unit: r.querySelector(".unit").value,
       Unit_Price: r.querySelector(".unit-price").value,
       Discount: r.querySelector(".discount").value,
-      Total_Price: r.querySelector(".total-display").textContent.replace(/,/g, ""),
+      Total_Price: r
+        .querySelector(".total-display")
+        .textContent.replace(/,/g, ""),
       Item_Remark: r.querySelector(".item-remark").value,
     });
   }
@@ -571,19 +732,36 @@ async function doSave() {
     Customer_Name: document.getElementById("customerName").value,
     Tax_ID: document.getElementById("taxId").value,
     Billing_Address: billingAddress,
+    Billing_Branch_Type: billingBranchType,
+    Billing_Branch_Code: billingBranchCode,
     Shipping_Address: shippingAddress,
+    Shipping_Recipient_Name: document.getElementById("shippingRecipientName").value,
+    Shipping_Recipient_Phone: document.getElementById("shippingRecipientPhone").value,
     Phone: document.getElementById("customerPhone").value,
     Email: document.getElementById("customerEmail").value,
     Contact_Person: document.getElementById("contactPerson").value,
     Sales_ID: document.getElementById("salesId").value,
+    Payment_Type: document.getElementById("paymentType").value,
     Payment_Term: document.getElementById("paymentTerm").value,
     Delivery_Method: document.getElementById("deliveryMethod").value,
-    Courier: document.getElementById("courier").value,
     Delivery_Date: document.getElementById("deliveryDate").value,
     Remarks: document.getElementById("remarks").value,
-    Total_Exempted_VAT: document.getElementById("totalExemptedVAT").textContent.replace(/,/g, ""),
-    VAT_Amount: document.getElementById("vatAmount").textContent.replace(/,/g, ""),
+
+    // New 7-line summary amounts
+    Subtotal: document.getElementById("subtotalDisplay").textContent.replace(/,/g, ""),
+    Discount_Total: document.getElementById("totalDiscountDisplay").textContent.replace(/,/g, ""),
+    After_Discount: document.getElementById("afterDiscountDisplay").textContent.replace(/,/g, ""),
+    Deposit_Amount: document.getElementById("depositDisplay").textContent.replace(/,/g, ""),
+    Base_Amount: document.getElementById("baseAmountDisplay").textContent.replace(/,/g, ""),
+    VAT_Amount: document.getElementById("vatAmountDisplay").textContent.replace(/,/g, ""),
     Grand_Total: document.getElementById("grandTotal").textContent.replace(/,/g, ""),
+    
+    // New deposit proof image
+    Deposit_Proof_Base64: document.getElementById("depositProofBase64").value,
+    
+    // Fallback for older script logic if any
+    Total_Exempted_VAT: document.getElementById("subtotalDisplay").textContent.replace(/,/g, ""),
+
     items: items,
   };
 
@@ -593,15 +771,23 @@ async function doSave() {
     if (result.success) {
       const soNum = result.data || "N/A";
       // Added a slight delay as requested to ensure user feels the confirmation
-      setTimeout(function() {
+      setTimeout(function () {
         showSuccessModal(soNum);
       }, 500);
     } else {
-      showErrorModal("บันทึกไม่สำเร็จ", "เกิดข้อผิดพลาด: " + result.error + "<br>กรุณาลองใหม่อีกครั้ง");
+      showErrorModal(
+        "บันทึกไม่สำเร็จ",
+        "เกิดข้อผิดพลาด: " + result.error + "<br>กรุณาลองใหม่อีกครั้ง",
+      );
     }
   } catch (err) {
     hideLoading();
-    showErrorModal("เกิดข้อผิดพลาด", "ระบบเชื่อมต่อ API ไม่สำเร็จ<br>" + err.message + "<br>กรุณาลองใหม่อีกครั้ง");
+    showErrorModal(
+      "เกิดข้อผิดพลาด",
+      "ระบบเชื่อมต่อ API ไม่สำเร็จ<br>" +
+        err.message +
+        "<br>กรุณาลองใหม่อีกครั้ง",
+    );
   }
 }
 
@@ -610,7 +796,7 @@ async function doSave() {
 // ═══════════════════════════════════════════════════════
 function showConfirmModal(title, desc, yesText, noText, onYes) {
   const el = document.getElementById("confirmModal");
-  if(!el) return;
+  if (!el) return;
   document.getElementById("confirmTitle").innerHTML = title;
   document.getElementById("confirmDesc").innerHTML = desc;
   document.getElementById("confirmYesBtn").textContent = yesText || "ยืนยัน";
@@ -634,7 +820,7 @@ function showConfirmModal(title, desc, yesText, noText, onYes) {
 
 function showSuccessModal(soNumber) {
   const el = document.getElementById("successModal");
-  if(!el) return;
+  if (!el) return;
   document.getElementById("modalSONumber").textContent = soNumber;
   const modal = el.querySelector(".modal");
   modal.style.animation = "none";
@@ -646,7 +832,7 @@ function showSuccessModal(soNumber) {
 
 function showErrorModal(title, desc) {
   const el = document.getElementById("errorModal");
-  if(!el) return;
+  if (!el) return;
   document.getElementById("errorTitle").innerHTML = title;
   document.getElementById("errorDesc").innerHTML = desc;
   const modal = el.querySelector(".modal");
@@ -669,19 +855,20 @@ function closeModal(id) {
 function clearFormFields() {
   const form = document.getElementById("soForm");
   if (form) form.reset();
-  
+
   const tbody = document.getElementById("productTableBody");
   if (tbody) {
     tbody.innerHTML = "";
     rowCounter = 0;
     addProductRow();
   }
-  
-  _soNumber = ""; 
+
+  _soNumber = "";
   calculateSummary();
   setDefaultDate();
-  
+
   window.scrollTo({ top: 0, behavior: "smooth" });
+  toggleBranchInput();
 }
 
 // Global click listener for modal backdrops
@@ -692,30 +879,15 @@ document.addEventListener("click", function (e) {
   }
 });
 
-function resetForm() {
-  const form = document.getElementById("soForm");
-  if (form) form.reset();
-  
-  const tbody = document.getElementById("productTableBody");
-  if (tbody) {
-    tbody.innerHTML = "";
-    // Re-add one empty row for convenience
-    addProductRow();
-  }
-  
-  // Reset sequence/state if any
-  _soNumber = ""; 
-  calculateSummary();
-  setDefaultDate();
-  
-  // Scroll to top
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
 
 function printSO(soNumber) {
-  if (!soNumber) soNumber = document.getElementById("modalSONumber").textContent;
-  if(typeof fetchAPI !== "undefined") {
-     fetchAPI("logAction", { actionName: "พิมพ์ใบสั่งขาย", details: "เลขที่ SO: " + soNumber }).catch(function(){});
+  if (!soNumber)
+    soNumber = document.getElementById("modalSONumber").textContent;
+  if (typeof fetchAPI !== "undefined") {
+    fetchAPI("logAction", {
+      actionName: "พิมพ์ใบสั่งขาย",
+      details: "เลขที่ SO: " + soNumber,
+    }).catch(function () {});
   }
   // Redirect to print template static page, passing SO number via URL params
   window.open("print-template.html?so=" + soNumber, "_blank");
@@ -730,7 +902,7 @@ function newSO() {
     function () {
       clearFormFields();
       showToast("ล้างฟอร์มเรียบร้อย พร้อมสร้าง SO ใหม่", "success");
-    }
+    },
   );
 }
 
@@ -742,7 +914,7 @@ function resetForm() {
     function () {
       clearFormFields();
       showToast("ล้างฟอร์มเรียบร้อยแล้ว", "success");
-    }
+    },
   );
 }
 
@@ -751,7 +923,7 @@ function resetForm() {
 // ═══════════════════════════════════════════════════════
 function showLoading(title, desc) {
   const el = document.getElementById("loadingOverlay");
-  if(!el) return;
+  if (!el) return;
   const titleEl = document.getElementById("loadingText"); // Fixed ID
   const descEl = document.getElementById("loadingSubtext"); // Fixed ID
   if (titleEl && title) titleEl.textContent = title;
@@ -761,68 +933,150 @@ function showLoading(title, desc) {
 
 function hideLoading() {
   const el = document.getElementById("loadingOverlay");
-  if(el) el.classList.remove("show");
+  if (el) el.classList.remove("show");
 }
 
 function showConfirmModal(title, desc, yesText, noText, onYes) {
   const el = document.getElementById("confirmModal");
   if (!el) {
     // Fallback if modal is missing
-    if(confirm(title + "\n\n" + desc.replace(/<[^>]*>/g, ''))) {
-      if(onYes) onYes();
+    if (confirm(title + "\n\n" + desc.replace(/<[^>]*>/g, ""))) {
+      if (onYes) onYes();
     }
     return;
   }
   const titleEl = document.getElementById("confirmTitle");
   const descEl = document.getElementById("confirmDesc");
-  if(titleEl) titleEl.innerHTML = title;
-  if(descEl) descEl.innerHTML = desc;
-  
+  if (titleEl) titleEl.innerHTML = title;
+  if (descEl) descEl.innerHTML = desc;
+
   const yesBtn = document.getElementById("confirmYesBtn");
   const noBtn = document.getElementById("confirmNoBtn");
-  
-  if(yesText && yesBtn) yesBtn.textContent = yesText;
-  if(noText && noBtn) noBtn.textContent = noText;
 
-  if(yesBtn) {
-    yesBtn.onclick = function() {
+  if (yesText && yesBtn) yesBtn.textContent = yesText;
+  if (noText && noBtn) noBtn.textContent = noText;
+
+  if (yesBtn) {
+    yesBtn.onclick = function () {
       el.classList.remove("show");
-      if(onYes) onYes();
+      if (onYes) onYes();
     };
   }
-  if(noBtn) {
-    noBtn.onclick = function() {
+  if (noBtn) {
+    noBtn.onclick = function () {
       el.classList.remove("show");
     };
   }
-  
+
   el.classList.add("show");
 }
 
 function showToast(msg, type) {
   const container = document.getElementById("toastContainer");
-  if(!container) return;
+  if (!container) return;
   const toast = document.createElement("div");
   toast.className = "toast " + (type || "success");
-  
+
   let icon = "✓";
   if (type === "error") icon = "✕";
   if (type === "warning") icon = "!";
-  
-  toast.innerHTML = '<div class="toast-icon">' + icon + '</div><div class="toast-message">' + msg + '</div>';
+
+  toast.innerHTML =
+    '<div class="toast-icon">' +
+    icon +
+    '</div><div class="toast-message">' +
+    msg +
+    "</div>";
   container.appendChild(toast);
-  
+
   setTimeout(function () {
     toast.style.animation = "slideOutRight 0.3s forwards";
     setTimeout(function () {
-      if(toast.parentNode) toast.remove();
+      if (toast.parentNode) toast.remove();
     }, 300);
   }, 3000);
 }
 
 function goPage(page) {
-  if (page === 'index') window.location.href = 'index.html';
-  if (page === 'history') window.location.href = 'history.html';
-  if (page === 'salesperson') window.location.href = 'master-salesperson.html';
-  if (page === 'product') window.location.href = 'master-product.html';
+  if (page === "index") window.location.href = "index.html";
+  if (page === "history") window.location.href = "history.html";
+  if (page === "salesperson") window.location.href = "master-salesperson.html";
+  if (page === "product") window.location.href = "master-product.html";
+}
+
+// ─── DEPOSIT UI TOGGLE ──────────────────────────────────
+function toggleDepositInput() {
+  const cb = document.getElementById("hasDeposit");
+  const container = document.getElementById("depositInputContainer");
+  const amt = document.getElementById("depositAmount");
+  if (!cb || !container || !amt) return;
+
+  if (cb.checked) {
+    container.style.display = "flex";
+  } else {
+    container.style.display = "none";
+    amt.value = "0.00";
+    calculateSummary();
+  }
+}
+
+// ─── DELIVERY DATE TOGGLE ───────────────────────────────
+function toggleDeliveryDate() {
+  const method = document.getElementById("deliveryMethod").value;
+  const dateInput = document.getElementById("deliveryDate");
+  const pickerBtn = document.querySelector("#deliveryDate").nextElementSibling.nextElementSibling;
+  
+  if (method === "จัดส่งโดยบริษัท") {
+    dateInput.value = "";
+    dateInput.disabled = true;
+    if (pickerBtn) pickerBtn.disabled = true;
+  } else {
+    dateInput.disabled = false;
+    if (pickerBtn) pickerBtn.disabled = false;
+  }
+}
+
+// ─── DEPOSIT PROOF UPLOAD (WEBP COMPRESSION) ────────────
+function handleProofUpload(input) {
+  const file = input.files[0];
+  const statusEl = document.getElementById("proofUploadStatus");
+  const base64Input = document.getElementById("depositProofBase64");
+  
+  if (!file) {
+    statusEl.style.display = "none";
+    base64Input.value = "";
+    return;
+  }
+
+  statusEl.style.display = "inline";
+  statusEl.textContent = "⏳ กำลังประมวลผล...";
+  statusEl.style.color = "#d97706";
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const img = new Image();
+    img.onload = function () {
+      const canvas = document.createElement("canvas");
+      // Scale down if image is too large (max width 800px)
+      let width = img.width;
+      let height = img.height;
+      if (width > 800) {
+        height = Math.round((height * 800) / width);
+        width = 800;
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Convert to webp with 0.8 quality
+      const webpDataUrl = canvas.toDataURL("image/webp", 0.8);
+      base64Input.value = webpDataUrl;
+      
+      statusEl.textContent = "✅ อัปโหลดสำเร็จ";
+      statusEl.style.color = "#059669";
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
