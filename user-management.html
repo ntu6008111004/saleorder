@@ -47,6 +47,16 @@
     .sig-upload-area .placeholder { color: #64748b; font-size: 13px; }
     .sig-upload-area input[type="file"] { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; }
     .sig-table-img { height: 30px; border: 1px solid #e2e8f0; border-radius: 2px; }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .badge-success { background: #dcfce7; color: #166534; }
+    .badge-danger { background: #fee2e2; color: #991b1b; }
   </style>
 </head>
 <body>
@@ -98,6 +108,10 @@
           <input type="text" id="userName" placeholder="ชื่อที่จะแสดงในระบบและประวัติ">
         </div>
         <div class="form-group">
+          <label>ตำแหน่ง</label>
+          <input type="text" id="userPosition" placeholder="เช่น ผู้จัดการทั่วไป">
+        </div>
+        <div class="form-group">
           <label>บทบาท (Role)</label>
           <select id="userRole">
               <option value="User">User (ผู้ใช้งานทั่วไป)</option>
@@ -105,6 +119,13 @@
               <option value="Accounting">Accounting (บัญชี)</option>
               <option value="Admin">Admin (ผู้จัดการระบบ)</option>
               <option value="Super Admin">Super Admin (ผู้ดูแลระบบสูงสุด)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>สถานะบัญชี</label>
+          <select id="userStatus">
+              <option value="ใช้งาน">🟢 ใช้งาน (Active)</option>
+              <option value="ปิดการใช้งาน">🔴 ปิดการใช้งาน (Inactive)</option>
           </select>
         </div>
         <div class="form-group" style="grid-column: span 2;">
@@ -138,13 +159,15 @@
               <th>ID</th>
               <th>Username</th>
               <th>ชื่อ-นามสกุล</th>
+              <th>ตำแหน่ง</th>
               <th>บทบาท (Role)</th>
+              <th>สถานะ</th>
               <th style="text-align:center;">ลายเซ็น</th>
               <th style="text-align:center;">จัดการ</th>
             </tr>
           </thead>
           <tbody id="userTableBody">
-            <tr><td colspan="4" class="empty-state">⏳ กำลังโหลด...</td></tr>
+            <tr><td colspan="7" class="empty-state">⏳ กำลังโหลด...</td></tr>
           </tbody>
         </table>
       </div>
@@ -196,17 +219,22 @@ function renderTable() {
   
   allUsers.forEach(u => {
     const tr = document.createElement('tr');
+    const status = u.Status || 'ใช้งาน';
+    const badgeClass = status === 'ใช้งาน' ? 'badge-success' : 'badge-danger';
+    
     tr.innerHTML = `
-      <td>${u.id || ''}</td>
+      <td>${u.id || u.User_ID || ''}</td>
       <td><strong>${u.username}</strong></td>
       <td>${u.name}</td>
+      <td>${u.position || '-'}</td>
       <td><span class="role-badge ${u.role === 'Super Admin' ? 'role-superadmin' : (u.role === 'Admin' ? 'role-admin' : (u.role === 'Manager' ? 'role-manager' : (u.role === 'Accounting' ? 'role-accounting' : 'role-user')))}">${u.role}</span></td>
+      <td><span class="badge ${badgeClass}">${status}</span></td>
       <td style="text-align:center;">
         ${u.signature ? `<img src="${u.signature}" class="sig-table-img">` : '<span style="color:#cbd5e1; font-size:11px;">ไม่มี</span>'}
       </td>
       <td style="text-align:center;">
-        <button class="btn-edit" onclick="editUser('${u.id}')">✏️ แก้ไข</button> 
-        <button class="btn-danger" onclick="confirmDeleteUser('${u.id}', '${u.username}')">🗑 ลบ</button>
+        <button class="btn-edit" onclick="editUser('${u.id || u.User_ID}')">✏️ แก้ไข</button> 
+        <button class="btn-danger" onclick="confirmDeleteUser('${u.id || u.User_ID}', '${u.username}')">🗑 ลบ</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -217,7 +245,9 @@ function saveUser() {
   const username = document.getElementById('userId').value.trim();
   const pin = document.getElementById('userPin').value.trim();
   const name = document.getElementById('userName').value.trim();
+  const position = document.getElementById('userPosition').value.trim();
   const role = document.getElementById('userRole').value;
+  const status = document.getElementById('userStatus').value;
   const signature = document.getElementById('sigBase64').value;
   
   if (!username || !pin || !name) { 
@@ -228,7 +258,7 @@ function saveUser() {
   showConfirm('💾 แจ้งเตือน', 'ต้องการบันทึกผู้ใช้ ' + username + ' ใช่หรือไม่?', async function() {
     showLoading();
     try {
-      const res = await fetchAPI("saveSystemUser", { id: currentEditId, username, pin, name, role, signature });
+      const res = await fetchAPI("saveSystemUser", { id: currentEditId, username, pin, name, position, role, status, signature });
       hideLoading();
       if(res.success) {
         showToast(res.message, 'success');
@@ -246,7 +276,9 @@ function editUser(id) {
   document.getElementById('userId').value = u.username;
   document.getElementById('userPin').value = u.pin;
   document.getElementById('userName').value = u.name;
+  document.getElementById('userPosition').value = u.position || '';
   document.getElementById('userRole').value = u.role;
+  document.getElementById('userStatus').value = u.Status || 'ใช้งาน';
   
   // Signature populate
   if (u.signature) {
@@ -284,7 +316,9 @@ function clearForm() {
   document.getElementById('userId').value = '';
   document.getElementById('userPin').value = '';
   document.getElementById('userName').value = '';
+  document.getElementById('userPosition').value = '';
   document.getElementById('userRole').value = 'User';
+  document.getElementById('userStatus').value = 'ใช้งาน';
   resetSignature();
   document.getElementById('formTitle').textContent = 'เพิ่มผู้ใช้งานใหม่';
 }

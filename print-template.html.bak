@@ -13,9 +13,8 @@
       font-family: 'Sarabun', sans-serif;
       background: #f0f4f8;
       color: #1e293b;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-      color-adjust: exact !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     .print-container {
@@ -183,14 +182,10 @@
       z-index: 2;
     }
     .sig-line {
+      border-bottom: 1px dotted #000;
       width: 220px;
-      height: 1px;
-      margin: 35px auto 5px;
+      margin: 35px auto 5px; /* Reduced from 45px to move everything up */
       position: relative;
-      background-image: radial-gradient(circle, #000 1px, transparent 1.5px);
-      background-position: bottom;
-      background-size: 5px 1px;
-      background-repeat: repeat-x;
     }
     .sig-label { font-weight: 600; margin-bottom: 5px; }
 

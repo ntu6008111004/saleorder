@@ -1,6 +1,6 @@
 // ─── API CONFIGURATION ────────────────────────────────
 // IMPORTANT: Replace this URL with your published Google Apps Script Web App URL
-const API_URL = "https://script.google.com/macros/s/AKfycbyKoOn_fOupwLY9nKEDFXRTHfBa2g3ApxUuSeYZCosu7Jng8ZMrOEmfZemZTh0BUGRxFA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwyM3oJYhJHCg2kC8IPxjAm-S0m7T345NUSRcpziNUsxIYpMVPI3GVTkTAtS8wcBxdBYA/exec";
 
 // ─── PAYLOAD ENCRYPTION ─────────────────────────────────
 function encryptPayload(data) {
@@ -63,8 +63,8 @@ async function fetchAPI(action, payload = {}) {
 
 // ─── WRAPPER FUNCTIONS ────────────────────────────────
 const API = {
-  getSalespersons: async () => {
-    return await fetchAPI("getSalespersons");
+  getSalespersons: async (options) => {
+    return await fetchAPI("getSalespersons", { options: options });
   },
   
   getProducts: async () => {
@@ -108,7 +108,7 @@ const API = {
     return await fetchAPI("saveProduct", payload);
   },
 
-  deleteProduct: async (productCode) => {
-    return await fetchAPI("deleteProduct", { productCode: productCode });
+  deleteProduct: async (productId) => {
+    return await fetchAPI("deleteProduct", { productId: productId });
   }
 };

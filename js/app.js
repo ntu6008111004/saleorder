@@ -94,7 +94,7 @@ async function loadMasterData() {
   try {
     // Load all data in parallel
     const [spRes, prRes, addrRes] = await Promise.all([
-      API.getSalespersons().catch((e) => {
+      API.getSalespersons({ activeOnly: true }).catch((e) => {
         console.error("Salespersons error:", e);
         return { success: false, error: e.message };
       }),
