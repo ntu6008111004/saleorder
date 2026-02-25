@@ -21,9 +21,23 @@
     .btn-print { padding:6px 12px; border:1.5px solid #10b981; background:#ecfdf5; color:#10b981; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; transition:all .2s; font-family:'Sarabun',sans-serif; }
     .btn-print:hover { background:#10b981; color:#fff; }
     
-    .search-box { margin-bottom: 20px; position: relative; }
-    .search-box input { width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 14px; outline: none; transition: all .2s; }
+    .search-filter-container { display: flex; flex-direction: column; gap: 24px; margin-bottom: 30px; background: #fff; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+    .filter-group { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px dashed #f1f5f9; }
+    .search-group { width: 100%; }
+    
+    .date-input-container { display: flex; flex-direction: column; gap: 6px; }
+    .date-input-container label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-left: 2px; display: block; }
+    
+    /* Using styles from style.css but with local sizing for history page */
+    .date-input-wrapper { width: 180px; }
+    .date-input-wrapper input[type="text"] { font-size: 14px; padding: 10px 12px; height: 44px; display: block; width: 100%; box-sizing: border-box; }
+    .picker-btn { height: 44px; width: 44px; flex-shrink: 0; }
+    
+    .search-box input { width: 100%; height: 48px; padding: 10px 16px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 15px; outline: none; transition: all .2s; box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
     .search-box input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59,130,246,0.1); }
+    
+    .btn-reset-filter { padding: 0 24px; background: #f8fafc; color: #64748b; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; height: 44px; line-height: 42px; box-sizing: border-box; margin-bottom: 0; }
+    .btn-reset-filter:hover { background: #f1f5f9; color: #0f172a; border-color: #cbd5e1; }
 
     .status-badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
     .status-pending { background: #fef08a; color: #854d0e; }
@@ -115,8 +129,31 @@
       <h2>รายการใบสั่งขายทั้งหมด</h2>
     </div>
     <div class="card-body">
-      <div class="search-box">
-        <input type="text" id="searchInput" placeholder="ค้นหาด้วยเลขที่ SO หรือ ชื่อลูกค้า..." oninput="filterOrders()">
+      <div class="search-filter-container">
+        <div class="filter-group">
+          <div class="date-input-container">
+            <label>จากวันที่ (From Date)</label>
+            <div class="date-input-wrapper">
+              <input type="text" id="startDateDisplay" placeholder="วว/ดด/ปปปป" maxlength="10">
+              <input type="date" id="startDate" class="hidden-picker" onchange="syncDateDisplay(this, 'startDateDisplay'); filterOrders();">
+              <button type="button" class="picker-btn" onclick="togglePicker('startDate')">📅</button>
+            </div>
+          </div>
+          <div class="date-input-container">
+            <label>ถึงวันที่ (To Date)</label>
+            <div class="date-input-wrapper">
+              <input type="text" id="endDateDisplay" placeholder="วว/ดด/ปปปป" maxlength="10">
+              <input type="date" id="endDate" class="hidden-picker" onchange="syncDateDisplay(this, 'endDateDisplay'); filterOrders();">
+              <button type="button" class="picker-btn" onclick="togglePicker('endDate')">📅</button>
+            </div>
+          </div>
+          <button class="btn-reset-filter" onclick="resetFilters()">ล้างค่า</button>
+        </div>
+        <div class="search-group">
+          <div class="search-box">
+            <input type="text" id="searchInput" placeholder="ค้นหาด้วย เลขที่ SO, ชื่อลูกค้า หรือ พนักงานขาย..." oninput="filterOrders()">
+          </div>
+        </div>
       </div>
 
       <div class="table-wrapper">
@@ -168,7 +205,22 @@
   const itemsPerPage = 10;
   document.addEventListener('DOMContentLoaded', () => {
     Auth.checkAuth();
+    
+    // Set default dates to today (Local Time YYYY-MM-DD)
+    const now = new Date();
+    const todayISO = now.getFullYear() + '-' + 
+                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                  String(now.getDate()).padStart(2, '0');
+    
+    document.getElementById('startDate').value = todayISO;
+    document.getElementById('endDate').value = todayISO;
+    
+    syncDateDisplay(document.getElementById('startDate'), 'startDateDisplay');
+    syncDateDisplay(document.getElementById('endDate'), 'endDateDisplay');
+    
     loadOrders();
+    
+    initDisplayManualInput();
     
     window.addEventListener('so_orders_updated', (e) => {
        const newOrders = e.detail || [];
@@ -178,6 +230,11 @@
        }
     });
   });
+
+  function getLocalToday() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }
   function formatDate(val) {
     if (!val) return '-';
     if (typeof val === 'string' && val.indexOf('T') !== -1 && val.indexOf('Z') !== -1) {
@@ -191,6 +248,46 @@
       } catch(e) { return val; }
     }
     return val;
+  }
+
+  function togglePicker(id) {
+    const el = document.getElementById(id);
+    if (el && el.showPicker) {
+      el.showPicker();
+    } else if (el) {
+      el.focus();
+      el.click();
+    }
+  }
+
+  function syncDateDisplay(input, displayId) {
+    if (!input.value) {
+      document.getElementById(displayId).value = "";
+      return;
+    }
+    const [y, m, d] = input.value.split('-');
+    const beYear = parseInt(y) + 543;
+    document.getElementById(displayId).value = `${d}/${m}/${beYear}`;
+  }
+
+  // To allow manual typing in display field if needed, but primarily for auto-sync
+  function initDisplayManualInput() {
+    const displays = ['startDateDisplay', 'endDateDisplay'];
+    displays.forEach(id => {
+      const displayEl = document.getElementById(id);
+      const pickerId = id.replace('Display', '');
+      const pickerEl = document.getElementById(pickerId);
+      
+      displayEl.addEventListener('blur', function() {
+        const val = this.value;
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(val)) {
+          const [d, m, yBE] = val.split('/');
+          const yAD = parseInt(yBE) - 543;
+          pickerEl.value = `${yAD}-${m}-${d}`;
+          filterOrders();
+        }
+      });
+    });
   }
 
   async function loadOrders() {
@@ -210,12 +307,73 @@
     }
   }
 
+  function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    const todayISO = getLocalToday();
+    document.getElementById('startDate').value = todayISO;
+    document.getElementById('endDate').value = todayISO;
+    syncDateDisplay(document.getElementById('startDate'), 'startDateDisplay');
+    syncDateDisplay(document.getElementById('endDate'), 'endDateDisplay');
+    currentPage = 1;
+    renderTable();
+  }
+
   function renderTable() {
-    const input = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = allOrders.filter(o => 
-      o.SO_Number.toLowerCase().includes(input) || 
-      (o.Customer_Name || '').toLowerCase().includes(input)
-    );
+    const searchText = document.getElementById('searchInput').value.trim().toLowerCase();
+    const startDateVal = document.getElementById('startDate').value;
+    const endDateVal = document.getElementById('endDate').value;
+    
+    // Split search into fragments for multi-word partial matching (e.g. "หน่อย จ้ะ")
+    const searchFragments = searchText.split(/\s+/).filter(f => f.length > 0);
+
+    const filtered = allOrders.filter(o => {
+      // 1. Date Range Filter
+      if (startDateVal || endDateVal) {
+        if (!o.SO_Date) return false;
+        
+        let orderDateStr = null;
+        const dateRaw = String(o.SO_Date);
+        
+        if (dateRaw.includes('/')) {
+          // It's likely DD/MM/YYYY (BE or AD) from formatGASDate
+          const parts = dateRaw.split('/');
+          if (parts.length === 3) {
+            const day = parts[0].padStart(2, '0');
+            const month = parts[1].padStart(2, '0');
+            let year = parseInt(parts[2], 10);
+            if (year > 2400) year -= 543; // Convert BE (e.g. 2569) back to AD (e.g. 2026) for comparison
+            orderDateStr = `${year}-${month}-${day}`;
+          }
+        } else if (dateRaw.includes('-')) {
+           // Maybe YYYY-MM-DD
+           orderDateStr = dateRaw.split('T')[0];
+        }
+
+        if (!orderDateStr) return false;
+        
+        if (startDateVal && orderDateStr < startDateVal) return false;
+        if (endDateVal && orderDateStr > endDateVal) return false;
+      }
+
+      // 2. Search Text Filter (Multi-fragment partial match)
+      if (searchFragments.length > 0) {
+        const soNum = (o.SO_Number || '').toLowerCase();
+        const custName = (o.Customer_Name || '').toLowerCase();
+        const salesName = (o.Sales_Name || '').toLowerCase();
+        const salesId = (o.Sales_ID || '').toLowerCase();
+
+        const allFragmentsMatch = searchFragments.every(fragment => {
+          return soNum.includes(fragment) || 
+                 custName.includes(fragment) || 
+                 salesName.includes(fragment) || 
+                 salesId.includes(fragment);
+        });
+
+        if (!allFragmentsMatch) return false;
+      }
+
+      return true;
+    });
 
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
     const start = (currentPage - 1) * itemsPerPage;

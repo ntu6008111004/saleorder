@@ -169,27 +169,31 @@ const Auth = {
 
         const links = navBar.querySelectorAll("a");
         links.forEach(link => {
-            const onclick = link.getAttribute("onclick") || "";
-            const text = link.textContent.toLowerCase();
+            const onclick = (link.getAttribute("onclick") || "").toLowerCase();
+            const text = link.textContent || "";
             const isActive = link.classList.contains("active");
 
-            // Robust page matching
-            const isHome = onclick.includes("index") || (isActive && (path.endsWith("index.html") || path.endsWith("/")));
-            const isHistory = onclick.includes("history") || (isActive && path.endsWith("history.html"));
-            const isSalesperson = onclick.includes("salesperson") || (isActive && path.endsWith("master-salesperson.html"));
-            const isProduct = onclick.includes("product") || (isActive && path.endsWith("master-product.html"));
-            const isUserMgmt = onclick.includes("user-management") || (isActive && path.endsWith("user-management.html"));
-            const isLogs = onclick.includes("system-log") || (isActive && path.endsWith("system-log.html"));
+            // Robust page matching using both onclick and text content
+            const isHome = onclick.includes("index") || text.includes("สร้าง") || (isActive && (path.endsWith("index.html") || path.endsWith("/")));
+            const isHistory = onclick.includes("history") || text.includes("ประวัติ") || (isActive && path.endsWith("history.html"));
+            const isSalesperson = onclick.includes("salesperson") || text.includes("พนักงานขาย") || (isActive && path.endsWith("master-salesperson.html"));
+            const isProduct = onclick.includes("product") || text.includes("สินค้า") || (isActive && path.endsWith("master-product.html"));
+            const isUserMgmt = onclick.includes("user-management") || text.includes("จัดการผู้ใช้") || (isActive && path.endsWith("user-management.html"));
+            const isLogs = onclick.includes("system-log") || text.includes("ประวัติการใช้งาน") || (isActive && path.endsWith("system-log.html"));
 
             if (isSuperAdmin) {
                 link.style.display = "flex";
             } else if (isAdmin) {
                 link.style.display = isLogs ? "none" : "flex";
             } else if (isManager) {
+                // Manager only sees history
                 link.style.display = isHistory ? "flex" : "none";
             } else if (isAccounting) {
+                // Accounting sees history and products
                 link.style.display = (isHistory || isProduct) ? "flex" : "none";
-            } else if (isUser) {
+            } else {
+                // Default / User / Salesperson
+                // can see Create Sale Order and History
                 link.style.display = (isHome || isHistory) ? "flex" : "none";
             }
         });

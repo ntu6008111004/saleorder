@@ -1,6 +1,6 @@
 // ─── API CONFIGURATION ────────────────────────────────
 // IMPORTANT: Replace this URL with your published Google Apps Script Web App URL
-const API_URL = "https://script.google.com/macros/s/AKfycbzT3NBRT8atMvhoISQxdMLrtAO5ctpzVmhq5uQTXsg3llqluBl2hPYneW-I047Iaesq_w/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyKoOn_fOupwLY9nKEDFXRTHfBa2g3ApxUuSeYZCosu7Jng8ZMrOEmfZemZTh0BUGRxFA/exec";
 
 // ─── PAYLOAD ENCRYPTION ─────────────────────────────────
 function encryptPayload(data) {
