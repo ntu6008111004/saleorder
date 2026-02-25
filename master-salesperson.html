@@ -69,8 +69,9 @@
     <div class="card-body">
       <div class="form-grid">
         <div class="form-group">
-          <label>รหัสพนักงาน (Sales_ID) <span style="color:#ef4444">*</span></label>
-          <input type="text" id="salesId" placeholder="เช่น S001">
+          <label>รหัสพนักงาน (Sales_ID)</label>
+          <input type="hidden" id="internalId">
+          <input type="text" id="salesId" placeholder="ระบบจะรันรหัสอัตโนมัติ (DECxxx)" readonly style="background:#f8fafc; color:#64748b;">
         </div>
         <div class="form-group">
           <label>ชื่อ-นามสกุล <span style="color:#ef4444">*</span></label>
@@ -115,7 +116,8 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>รหัส</th>
+              <th># ID</th>
+              <th>รหัสพนักงาน</th>
               <th>ชื่อ-นามสกุล</th>
               <th>เบอร์โทร</th>
               <th>อีเมล</th>
@@ -211,14 +213,15 @@ function renderTable() {
       ? '<img class="sig-preview" src="' + (sp.Signature_Base64.indexOf('data:') === 0 ? sp.Signature_Base64 : 'data:image/webp;base64,' + sp.Signature_Base64) + '">'
       : '<span style="color:#94a3b8">ไม่มี</span>';
     tr.innerHTML =
+      '<td><span style="color:#94a3b8; font-size:11px;">#' + (sp.ID || '') + '</span></td>' +
       '<td><strong>' + (sp.Sales_ID || '') + '</strong></td>' +
       '<td>' + (sp.Sales_Name || '') + '</td>' +
       '<td>' + (sp.Phone || '') + '</td>' +
       '<td>' + (sp.Email || '') + '</td>' +
       '<td>' + sigHtml + '</td>' +
       '<td style="text-align:center; white-space:nowrap;">' +
-        '<button class="btn-edit" onclick="editSP(\'' + sp.Sales_ID + '\')">✏️ แก้ไข</button> ' +
-        '<button class="btn-danger" onclick="confirmDeleteSP(\'' + sp.Sales_ID + '\')">🗑 ลบ</button>' +
+        '<button class="btn-edit" onclick="editSP(\'' + sp.ID + '\')">✏️ แก้ไข</button> ' +
+        '<button class="btn-danger" onclick="confirmDeleteSP(\'' + sp.ID + '\', \'' + (sp.Sales_ID || '') + '\')">🗑 ลบ</button>' +
       '</td>';
     tbody.appendChild(tr);
   });
@@ -249,15 +252,17 @@ function handleSignatureUpload(input) {
 }
 
 function saveSP() {
-  var id = document.getElementById('salesId').value.trim();
+  var intId = document.getElementById('internalId').value;
+  var salesId = document.getElementById('salesId').value;
   var name = document.getElementById('salesName').value.trim();
-  if (!id || !name) { showToast('กรุณากรอกรหัสและชื่อพนักงาน', 'error'); return; }
+  if (!name) { showToast('กรุณากรอกชื่อพนักงาน', 'error'); return; }
 
-  showConfirm('💾 ยืนยันการบันทึก', 'บันทึกข้อมูลพนักงาน <strong>' + name + '</strong> (' + id + ')?', async function() {
+  showConfirm('💾 ยืนยันการบันทึก', 'บันทึกข้อมูลพนักงาน <strong>' + name + '</strong> ' + (salesId ? '(' + salesId + ')' : '(พนักงานใหม่)') + '?', async function() {
     showLoading('กำลังบันทึกข้อมูล...', 'ระบบกำลังเขียนลงฐานข้อมูล');
     try {
       const r = await API.saveSalesperson({
-        Sales_ID: id,
+        ID: intId,
+        Sales_ID: salesId,
         Sales_Name: name,
         Phone: document.getElementById('salesPhone').value,
         Email: document.getElementById('salesEmail').value,
@@ -272,11 +277,11 @@ function saveSP() {
   });
 }
 
-function editSP(salesId) {
-  var sp = allSalespersons.find(function(s) { return s.Sales_ID === salesId; });
+function editSP(id) {
+  var sp = allSalespersons.find(function(s) { return String(s.ID) === String(id); });
   if (!sp) return;
-  document.getElementById('salesId').value = sp.Sales_ID;
-  document.getElementById('salesId').setAttribute('readonly', true);
+  document.getElementById('internalId').value = sp.ID;
+  document.getElementById('salesId').value = sp.Sales_ID || '';
   document.getElementById('salesName').value = sp.Sales_Name || '';
   document.getElementById('salesPhone').value = sp.Phone || '';
   document.getElementById('salesEmail').value = sp.Email || '';
@@ -292,11 +297,11 @@ function editSP(salesId) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function confirmDeleteSP(salesId) {
-  showConfirm('🗑 ยืนยันการลบ', 'ต้องการลบพนักงาน <strong>' + salesId + '</strong> หรือไม่?<br>ข้อมูลจะถูกลบถาวร', async function() {
+function confirmDeleteSP(id, salesIdDisplay) {
+  showConfirm('🗑 ยืนยันการลบ', 'ต้องการลบพนักงาน <strong>' + salesIdDisplay + '</strong> (ID: ' + id + ') หรือไม่?<br>ข้อมูลจะถูกลบถาวร', async function() {
     showLoading('กำลังลบข้อมูล...');
     try {
-      const r = await API.deleteSalesperson(salesId);
+      const r = await API.deleteSalesperson(id);
       hideLoading();
       if (r.success) { showToast(r.message, 'success'); await loadData(); }
       else showToast(r.error, 'error');
@@ -307,8 +312,8 @@ function confirmDeleteSP(salesId) {
 }
 
 function clearForm() {
+  document.getElementById('internalId').value = '';
   document.getElementById('salesId').value = '';
-  document.getElementById('salesId').removeAttribute('readonly');
   document.getElementById('salesName').value = '';
   document.getElementById('salesPhone').value = '';
   document.getElementById('salesEmail').value = '';
@@ -332,8 +337,8 @@ function showConfirm(title,desc,onYes) {
   el.querySelector('.modal').style.animation='none'; setTimeout(function(){el.querySelector('.modal').style.animation='';},10);
   el.classList.add('show');
 }
-</script><footer style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 12px;">
-  System Version V1.2.0
+</script><footer class="system-footer">
+  System Version V1.2.4
 </footer>
 </body>
 </html>

@@ -29,6 +29,24 @@
     .role-manager { background:#fef3c7; color:#ea580c; }
     .role-user { background:#e0f2fe; color:#0ea5e9; }
     .role-accounting { background:#f3e8ff; color:#9333ea; }
+
+    /* Signature Styles */
+    .sig-upload-area {
+      border: 2px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      background: #f8fafc;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .sig-upload-area:hover { border-color: #3b82f6; background: #eff6ff; }
+    .sig-upload-area img { max-height: 80px; margin: 10px auto; border: 1px solid #e2e8f0; border-radius: 4px; display: none; }
+    .sig-upload-area.has-file img { display: block; }
+    .sig-upload-area .placeholder { color: #64748b; font-size: 13px; }
+    .sig-upload-area input[type="file"] { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+    .sig-table-img { height: 30px; border: 1px solid #e2e8f0; border-radius: 2px; }
   </style>
 </head>
 <body>
@@ -86,7 +104,17 @@
               <option value="Manager">Manager (ผู้จัดการ)</option>
               <option value="Accounting">Accounting (บัญชี)</option>
               <option value="Admin">Admin (ผู้จัดการระบบ)</option>
+              <option value="Super Admin">Super Admin (ผู้ดูแลระบบสูงสุด)</option>
           </select>
+        </div>
+        <div class="form-group" style="grid-column: span 2;">
+          <label>ลายเซ็น (Signature - แนะนำพื้นหลังใส WebP/PNG)</label>
+          <input type="hidden" id="sigBase64">
+          <div class="sig-upload-area" id="sigUploadArea">
+            <div class="placeholder" id="sigPlaceholder">คลิกหรือลากไฟล์รูปภาพมาวางที่นี่</div>
+            <img id="sigPreview" src="">
+            <input type="file" id="sigInput" accept="image/*" onchange="handleSignatureUpload(event)">
+          </div>
         </div>
       </div>
       <div style="display:flex; gap:12px; margin-top:20px;">
@@ -111,6 +139,7 @@
               <th>Username</th>
               <th>ชื่อ-นามสกุล</th>
               <th>บทบาท (Role)</th>
+              <th style="text-align:center;">ลายเซ็น</th>
               <th style="text-align:center;">จัดการ</th>
             </tr>
           </thead>
@@ -171,7 +200,10 @@ function renderTable() {
       <td>${u.id || ''}</td>
       <td><strong>${u.username}</strong></td>
       <td>${u.name}</td>
-      <td><span class="role-badge ${u.role === 'Admin' ? 'role-admin' : (u.role === 'Manager' ? 'role-manager' : (u.role === 'Accounting' ? 'role-accounting' : 'role-user'))}">${u.role}</span></td>
+      <td><span class="role-badge ${u.role === 'Super Admin' ? 'role-superadmin' : (u.role === 'Admin' ? 'role-admin' : (u.role === 'Manager' ? 'role-manager' : (u.role === 'Accounting' ? 'role-accounting' : 'role-user')))}">${u.role}</span></td>
+      <td style="text-align:center;">
+        ${u.signature ? `<img src="${u.signature}" class="sig-table-img">` : '<span style="color:#cbd5e1; font-size:11px;">ไม่มี</span>'}
+      </td>
       <td style="text-align:center;">
         <button class="btn-edit" onclick="editUser('${u.id}')">✏️ แก้ไข</button> 
         <button class="btn-danger" onclick="confirmDeleteUser('${u.id}', '${u.username}')">🗑 ลบ</button>
@@ -186,6 +218,7 @@ function saveUser() {
   const pin = document.getElementById('userPin').value.trim();
   const name = document.getElementById('userName').value.trim();
   const role = document.getElementById('userRole').value;
+  const signature = document.getElementById('sigBase64').value;
   
   if (!username || !pin || !name) { 
     showToast('กรุณากรอก Username, PIN และ ชื่อผู้ใช้ให้ครบ', 'error'); 
@@ -195,7 +228,7 @@ function saveUser() {
   showConfirm('💾 แจ้งเตือน', 'ต้องการบันทึกผู้ใช้ ' + username + ' ใช่หรือไม่?', async function() {
     showLoading();
     try {
-      const res = await fetchAPI("saveSystemUser", { id: currentEditId, username, pin, name, role });
+      const res = await fetchAPI("saveSystemUser", { id: currentEditId, username, pin, name, role, signature });
       hideLoading();
       if(res.success) {
         showToast(res.message, 'success');
@@ -214,6 +247,17 @@ function editUser(id) {
   document.getElementById('userPin').value = u.pin;
   document.getElementById('userName').value = u.name;
   document.getElementById('userRole').value = u.role;
+  
+  // Signature populate
+  if (u.signature) {
+    document.getElementById('sigBase64').value = u.signature;
+    document.getElementById('sigPreview').src = u.signature;
+    document.getElementById('sigPlaceholder').textContent = '✅ ลายเซ็นเดิม';
+    document.getElementById('sigUploadArea').classList.add('has-file');
+  } else {
+    resetSignature();
+  }
+
   document.getElementById('formTitle').textContent = '✏️ แก้ไขผู้ใช้งาน: ' + u.username;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -241,7 +285,50 @@ function clearForm() {
   document.getElementById('userPin').value = '';
   document.getElementById('userName').value = '';
   document.getElementById('userRole').value = 'User';
+  resetSignature();
   document.getElementById('formTitle').textContent = 'เพิ่มผู้ใช้งานใหม่';
+}
+
+function handleSignatureUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 400; // Limit size for performance
+      let width = img.width;
+      let height = img.height;
+
+      if (width > MAX_WIDTH) {
+        height *= MAX_WIDTH / width;
+        width = MAX_WIDTH;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      const webpData = canvas.toDataURL('image/webp', 0.7);
+      document.getElementById('sigBase64').value = webpData;
+      document.getElementById('sigPreview').src = webpData;
+      document.getElementById('sigPlaceholder').textContent = '✅ ' + file.name;
+      document.getElementById('sigUploadArea').classList.add('has-file');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetSignature() {
+  document.getElementById('sigBase64').value = '';
+  document.getElementById('sigPreview').src = '';
+  document.getElementById('sigPlaceholder').textContent = 'คลิกหรือลากไฟล์รูปภาพมาวางที่นี่';
+  document.getElementById('sigUploadArea').classList.remove('has-file');
+  document.getElementById('sigInput').value = '';
 }
 
 function showLoading(t) { if(t) document.getElementById('loadingText').textContent=t; document.getElementById('loadingOverlay').classList.add('show'); }
@@ -255,8 +342,8 @@ function showConfirm(title,desc,onYes) {
   document.getElementById('confirmNoBtn').onclick=function(){el.classList.remove('show');};
   el.classList.add('show');
 }
-</script><footer style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 12px;">
-  System Version V1.2.0
+</script><footer class="system-footer">
+  System Version V1.2.4
 </footer>
 </body>
 </html>

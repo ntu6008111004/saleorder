@@ -116,7 +116,7 @@
              sessionStorage.setItem("so_currentUser", userData);
              localStorage.removeItem("so_currentUser"); // Ensure no stray login remains
          }
-         window.location.href = "./index.html";
+         window.location.href = Auth.getDefaultPage(res.data.role);
       } else {
          errorEl.textContent = res.error || "รหัสผ่านไม่ถูกต้อง";
          errorEl.style.display = "block";
@@ -128,8 +128,8 @@
     }
   }
 </script>
-<footer style="text-align:center; padding: 20px; color: rgba(255,255,255,0.7); font-size: 12px;">
-  System Version V1.2.0
+<footer class="system-footer">
+  System Version V1.2.4
 </footer>
 </body>
 </html>

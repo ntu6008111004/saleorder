@@ -253,6 +253,7 @@
         position: relative !important;
       }
       .no-print { display: none; }
+      .system-footer { display: none !important; }
       @page {
         size: A4;
         margin: 0; /* Critical for full-bleed */
@@ -450,15 +451,16 @@
     <div class="bottom-section" style="bottom: 25mm;">
       <div class="signature-area">
         <div class="sig-box">
-          <img src="image/tapum.jpg" class="seal" alt="Seal">
+          <img src="image/tapum.jpg" class="seal hidden" id="companySeal" alt="Seal">
+          <div id="approverSigContainer"></div>
           <div class="sig-line"></div>
-          <div class="sig-label">ผู้อนุมัติ...................................................</div>
-          <div style="margin-top: 10px;" id="currentDateBE1">-</div>
+          <div class="sig-label">ผู้อนุมัติ <span id="approverName">...................................................</span></div>
+          <div style="margin-top: 10px;" id="currentDateBE1"></div>
         </div>
         <div class="sig-box">
           <div id="salesSigContainer"></div>
           <div class="sig-line"></div>
-          <div class="sig-label">พนักงานขาย...................................................</div>
+          <div class="sig-label">พนักงานขาย <span id="salespersonNamePrint">...................................................</span></div>
           <div style="margin-top: 10px;" id="soDateSig">-</div>
         </div>
       </div>
@@ -702,22 +704,35 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
 
       const sigStartRow = condStartRow + 8;
       
-      // Embed Seal
-      const sealB64 = await imgToBase64('.seal');
-      if (sealB64) {
-        const sealImg = workbook.addImage({ base64: sealB64, extension: 'png' });
-        sheet.addImage(sealImg, {
-          tl: { col: 1.5, row: sigStartRow - 1 },
-          ext: { width: 80, height: 80 }
-        });
+      // Embed Seal (only if visible in UI)
+      const sealEl = document.querySelector('.seal');
+      if (sealEl && !sealEl.classList.contains('hidden')) {
+        const sealB64 = await imgToBase64('.seal');
+        if (sealB64) {
+          const sealImg = workbook.addImage({ base64: sealB64, extension: 'png' });
+          sheet.addImage(sealImg, {
+            tl: { col: 1.5, row: sigStartRow - 1 },
+            ext: { width: 80, height: 80 }
+          });
+        }
       }
 
       // Embed Salesperson Signature if exists
-      const salesSigB64 = await imgToBase64('.sig-img');
+      const salesSigB64 = await imgToBase64('.sales-sig-img');
       if (salesSigB64) {
         const salesSigImg = workbook.addImage({ base64: salesSigB64, extension: 'png' });
         sheet.addImage(salesSigImg, {
           tl: { col: 5.5, row: sigStartRow - 0.5 },
+          ext: { width: 120, height: 40 }
+        });
+      }
+
+      // Embed Approver Signature if exists
+      const approverSigB64 = await imgToBase64('.approver-sig-img');
+      if (approverSigB64) {
+        const approverSigImg = workbook.addImage({ base64: approverSigB64, extension: 'png' });
+        sheet.addImage(approverSigImg, {
+          tl: { col: 1.5, row: sigStartRow - 0.5 },
           ext: { width: 120, height: 40 }
         });
       }
@@ -892,15 +907,43 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
           
           if (salesperson && salesperson.Signature_Base64) {
             const sigImg = document.createElement('img');
-            sigImg.className = 'sig-img';
+            sigImg.className = 'sig-img sales-sig-img';
             sigImg.src = salesperson.Signature_Base64.indexOf('data:') === 0 
               ? salesperson.Signature_Base64 
               : 'data:image/webp;base64,' + salesperson.Signature_Base64;
             document.getElementById('salesSigContainer').appendChild(sigImg);
           }
+          if (salesperson && salesperson.Sales_Name) {
+            document.getElementById('salespersonNamePrint').textContent = salesperson.Sales_Name;
+          }
 
-          const now = new Date();
-          document.getElementById('currentDateBE1').textContent = `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear() + 543}`;
+          // Approver Details
+          if (h.Approver_Signature) {
+            const appSigImg = document.createElement('img');
+            appSigImg.className = 'sig-img approver-sig-img';
+            appSigImg.src = h.Approver_Signature.indexOf('data:') === 0 
+              ? h.Approver_Signature 
+              : 'data:image/webp;base64,' + h.Approver_Signature;
+            document.getElementById('approverSigContainer').appendChild(appSigImg);
+          }
+          if (h.Approver_Name) {
+            document.getElementById('approverName').textContent = h.Approver_Name;
+            // Show seal only if approved AND no digital signature (to avoid overlap)
+            const seal = document.getElementById('companySeal');
+            if (seal) {
+              if (!h.Approver_Signature) {
+                seal.classList.remove('hidden');
+              } else {
+                seal.classList.add('hidden');
+              }
+            }
+          }
+
+          if (h.Approver_Date) {
+              document.getElementById('currentDateBE1').textContent = formatDate(h.Approver_Date);
+          } else {
+              document.getElementById('currentDateBE1').textContent = '';
+          }
         }
       } catch (e) {
         console.error(e);
@@ -913,8 +956,9 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
       }
     })();
   </script>
-<footer style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 12px;">
-  System Version V1.2.0
-</footer>
+
+  <!-- Notification Support -->
+  <script src="./js/api.js"></script>
+  <script src="./js/auth.js"></script>
 </body>
 </html>

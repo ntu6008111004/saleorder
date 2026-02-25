@@ -309,6 +309,13 @@ function togglePaymentTerms() {
         '<option value="เครดิต 60 วัน">เครดิต 60 วัน</option>';
       termSelect.innerHTML +=
         '<option value="เครดิต 90 วัน">เครดิต 90 วัน</option>';
+      termSelect.innerHTML +=
+        '<option value="ชำระเมื่อได้รับสินค้า">ชำระเมื่อได้รับสินค้า</option>';
+    } else if (type === "แบ่งชำระบริษัท") {
+      termSelect.innerHTML += '<option value="แบ่งชำระ 4 งวด">แบ่งชำระ 4 งวด</option>';
+      termSelect.innerHTML += '<option value="แบ่งชำระ 6 งวด">แบ่งชำระ 6 งวด</option>';
+      termSelect.innerHTML += '<option value="แบ่งชำระ 8 งวด">แบ่งชำระ 8 งวด</option>';
+      termSelect.innerHTML += '<option value="แบ่งชำระ 10 งวด">แบ่งชำระ 10 งวด</option>';
     }
   }
 }
@@ -594,7 +601,7 @@ function validateBranchCodeRealtime(el) {
   const num = parseInt(val, 10);
   const errEl = document.getElementById("branchCodeError");
   
-  if (val.length !== 5 || isNaN(num) || num < 0 || num > 100) {
+  if (val.length > 5 || isNaN(num) || num < 0 || num > 100) {
     el.style.borderColor = "#ef4444"; // Red border
     if (errEl) errEl.style.display = "block";
     return false;
@@ -623,7 +630,7 @@ function validateForm() {
   if (branchType && branchType.value === "Branch") {
     const branchCodeEl = document.getElementById("billingBranchCode");
     if (!validateBranchCodeRealtime(branchCodeEl)) {
-      showToast("กรุณาระบุรหัสสาขาให้ถูกต้อง (00000 - 00100)", "error");
+      showToast("กรุณาระบุรหัสสาขาให้ถูกต้อง (ระบุเป็นตัวเลข สูงสุด 5 หลัก)", "error");
       branchCodeEl.focus();
       return false;
     }
@@ -898,6 +905,7 @@ function newSO() {
   showConfirmModal(
     "🔄 เริ่มสร้างใบสั่งขายใหม่",
     "ระบบจะล้างข้อมูลทั้งหมดในฟอร์มปัจจุบัน<br>คุณแน่ใจหรือไม่?",
+    "ยืนยัน เริ่มใหม่",
     "ยกเลิก",
     function () {
       clearFormFields();
@@ -910,6 +918,7 @@ function resetForm() {
   showConfirmModal(
     "🔄 ล้างข้อมูลทั้งหมด",
     "ข้อมูลที่กรอกไว้ทั้งหมดจะถูกล้าง<br>คุณแน่ใจหรือไม่?",
+    "ยืนยัน ล้างข้อมูล",
     "ยกเลิก ไม่ล้าง",
     function () {
       clearFormFields();

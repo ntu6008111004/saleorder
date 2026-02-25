@@ -10,6 +10,14 @@ const Auth = {
     return localStorage.getItem("so_currentUser") || sessionStorage.getItem("so_currentUser");
   },
 
+  getDefaultPage: function(role) {
+    const r = (role || "").toLowerCase();
+    if (r === "manager" || r === "accounting") {
+        return "./history.html";
+    }
+    return "./index.html";
+  },
+
   checkAuth: function() {
     const userStr = this.getStoredUserStr();
     const isLoginPage = window.location.pathname.endsWith("login.html");
@@ -23,13 +31,16 @@ const Auth = {
     
     try {
       const user = JSON.parse(userStr);
-      const isAdmin = user.role === "Admin";
+      const role = (user.role || "").toLowerCase();
+      const isSuperAdmin = role === "super admin";
+      const isAdmin = role === "admin";
+      const isPrivileged = isSuperAdmin || isAdmin;
       
-      const isManager = user.role === "Manager";
+      const isManager = role === "manager";
 
       // If we are on login page, redirect to appropriate start page
       if (isLoginPage) {
-        window.location.href = isManager ? "./history.html" : "./index.html";
+        window.location.href = this.getDefaultPage(role);
         return user;
       }
       
@@ -42,10 +53,14 @@ const Auth = {
         return user;
       }
 
-      // If a non-admin tries to access admin pages, redirect to index
-      const isAdminPage = window.location.pathname.endsWith("user-management.html") || 
-                          window.location.pathname.endsWith("system-log.html");
-      if (isAdminPage && !isAdmin) {
+      // Page-level Access Control
+      const isUserMgmtPage = window.location.pathname.endsWith("user-management.html");
+      const isLogsPage = window.location.pathname.endsWith("system-log.html");
+      
+      if (isUserMgmtPage && !isPrivileged) {
+        window.location.href = "./index.html";
+      }
+      if (isLogsPage && !isSuperAdmin) {
         window.location.href = "./index.html";
       }
 
@@ -125,9 +140,10 @@ const Auth = {
           <div style="text-align: right; color: white;">
             <div style="font-weight: 600; font-size: 14px;">👤 ${user.name}</div>
             <div style="font-weight: 400; font-size: 12px; opacity: 0.85;">
-              ${user.role === 'Admin' ? '⭐ ผู้จัดการระบบ (Admin)' : 
-                (user.role === 'Manager' ? '💼 ผู้จัดการ (Manager)' : 
-                 (user.role === 'Accounting' ? '💴 บัญชี (Accounting)' : '🧑‍💻 พนักงานขาย (User)'))}
+              ${user.role === 'Super Admin' ? '⚡ ผู้ดูแลระบบสูงสุด (Super Admin)' : 
+                (user.role === 'Admin' ? '🛡️ ผู้จัดการระบบ (Admin)' : 
+                 (user.role === 'Manager' ? '💼 ผู้จัดการ (Manager)' : 
+                  (user.role === 'Accounting' ? '💴 บัญชี (Accounting)' : '🧑‍💻 พนักงานขาย (User)')))}
             </div>
           </div>
           <button class="btn-logout-cute" onclick="Auth.confirmLogout()">
@@ -144,70 +160,84 @@ const Auth = {
     const isLoginPage = path.endsWith("login.html");
 
     if (navBar && !isLoginPage) {
-        const isManager = user.role === "Manager";
-        const isAccounting = user.role === "Accounting";
-        const isUser = user.role === "User" || user.role === "Salesperson";
-        const isAdmin = user.role === "Admin";
+        const role = (user.role || "").toLowerCase();
+        const isSuperAdmin = role === "super admin";
+        const isAdmin = role === "admin";
+        const isManager = role === "manager";
+        const isAccounting = role === "accounting";
+        const isUser = role === "user" || role === "salesperson";
 
         const links = navBar.querySelectorAll("a");
         links.forEach(link => {
-            const text = link.textContent;
-            
-            if (isAdmin) {
-                link.style.display = "flex";
-                return;
-            }
+            const onclick = link.getAttribute("onclick") || "";
+            const text = link.textContent.toLowerCase();
+            const isActive = link.classList.contains("active");
 
-            if (isManager) {
-                if (!text.includes("ประวัติการขาย")) link.style.display = "none";
-                else link.style.display = "flex";
+            // Robust page matching
+            const isHome = onclick.includes("index") || (isActive && (path.endsWith("index.html") || path.endsWith("/")));
+            const isHistory = onclick.includes("history") || (isActive && path.endsWith("history.html"));
+            const isSalesperson = onclick.includes("salesperson") || (isActive && path.endsWith("master-salesperson.html"));
+            const isProduct = onclick.includes("product") || (isActive && path.endsWith("master-product.html"));
+            const isUserMgmt = onclick.includes("user-management") || (isActive && path.endsWith("user-management.html"));
+            const isLogs = onclick.includes("system-log") || (isActive && path.endsWith("system-log.html"));
+
+            if (isSuperAdmin) {
+                link.style.display = "flex";
+            } else if (isAdmin) {
+                link.style.display = isLogs ? "none" : "flex";
+            } else if (isManager) {
+                link.style.display = isHistory ? "flex" : "none";
             } else if (isAccounting) {
-                const allowed = text.includes("ประวัติการขาย") || text.includes("สินค้า");
-                link.style.display = allowed ? "flex" : "none";
+                link.style.display = (isHistory || isProduct) ? "flex" : "none";
             } else if (isUser) {
-                // User see New Order (Index), History (No Products as per latest request)
-                const allowed = text.includes("สร้าง Sale Order") || text.includes("ประวัติการขาย");
-                link.style.display = allowed ? "flex" : "none";
+                link.style.display = (isHome || isHistory) ? "flex" : "none";
             }
         });
 
-        // Admin-specific Extra Menus
-        if (isAdmin) {
-            let hasUsers = false;
-            let hasLogs = false;
-            links.forEach(link => {
-                if (link.textContent.includes("จัดการผู้ใช้")) hasUsers = true;
-                if (link.textContent.includes("ประวัติการใช้งาน")) hasLogs = true;
-            });
+        // Ensure User Management and Logs are visible for authorized roles
+        let hasUsers = false;
+        let hasLogs = false;
+        links.forEach(link => {
+            const onclick = link.getAttribute("onclick") || "";
+            const text = link.textContent;
+            // Check if link exists via onclick or if it's the active current-page link
+            if (onclick.includes("user-management.html") || (path.endsWith("user-management.html") && text.includes("จัดการผู้ใช้"))) hasUsers = true;
+            if (onclick.includes("system-log.html") || (path.endsWith("system-log.html") && text.includes("ประวัติการใช้งาน"))) hasLogs = true;
+        });
 
-            if (!hasUsers) {
-                const a = document.createElement("a");
-                a.innerHTML = "🛡️ จัดการผู้ใช้";
-                a.onclick = () => window.location.href = "./user-management.html";
-                if(path.endsWith("user-management.html")) a.className = "active";
-                navBar.appendChild(a);
-            }
-            if (!hasLogs) {
-                const a2 = document.createElement("a");
-                a2.innerHTML = "📝 ประวัติการใช้งาน";
-                a2.onclick = () => window.location.href = "./system-log.html";
-                if(path.endsWith("system-log.html")) a2.className = "active";
-                navBar.appendChild(a2);
-            }
+        if (!hasUsers && (isSuperAdmin || isAdmin)) {
+            const a = document.createElement("a");
+            a.innerHTML = "🛡️ จัดการผู้ใช้";
+            a.onclick = () => window.location.href = "./user-management.html";
+            if(path.endsWith("user-management.html")) a.className = "active";
+            navBar.appendChild(a);
+        }
+        if (!hasLogs && isSuperAdmin) {
+            const a2 = document.createElement("a");
+            a2.innerHTML = "📝 ประวัติการใช้งาน";
+            a2.onclick = () => window.location.href = "./system-log.html";
+            if(path.endsWith("system-log.html")) a2.className = "active";
+            navBar.appendChild(a2);
         }
     }
 
     // Page-level Access Control
-    if (!isLoginPage && user.role !== "Admin") {
-        const role = user.role;
-        let allowed = false;
+    if (!isLoginPage) {
+        const role = (user.role || "").toLowerCase();
+        const isSuperAdmin = role === "super admin";
+        const isAdmin = role === "admin";
         
-        if (role === "Manager") {
-            allowed = path.endsWith("history.html");
-        } else if (role === "Accounting") {
-            allowed = path.endsWith("history.html") || path.endsWith("master-product.html");
-        } else if (role === "User" || role === "Salesperson") {
-            allowed = path.endsWith("index.html") || path.endsWith("history.html") || path.endsWith("/");
+        if (isSuperAdmin) return; // Super Admin has access to everything
+        
+        let allowed = false;
+        if (isAdmin) {
+            allowed = !path.endsWith("system-log.html");
+        } else if (role === "manager") {
+            allowed = path.endsWith("history.html") || path.endsWith("print-template.html");
+        } else if (role === "accounting") {
+            allowed = path.endsWith("history.html") || path.endsWith("master-product.html") || path.endsWith("print-template.html");
+        } else if (role === "user" || role === "salesperson") {
+            allowed = path.endsWith("index.html") || path.endsWith("history.html") || path.endsWith("/") || path.endsWith("print-template.html");
         }
 
         if (!allowed && !path.endsWith("login.html")) {
@@ -215,10 +245,7 @@ const Auth = {
             this.showNotification("จำกัดสิทธิ์การเข้าถึง", "คุณไม่มีสิทธิ์เข้าใช้งานหน้านี้ ระบบจะพากลับไปยังหน้าที่เข้าถึงได้", "🚫");
             
             setTimeout(() => {
-                // Redirect to their default page
-                if (role === "Manager") window.location.href = "history.html";
-                else if (role === "Accounting") window.location.href = "history.html";
-                else window.location.href = "index.html";
+                window.location.href = this.getDefaultPage(role);
             }, 2000);
             
             return; // Stop further initialization
@@ -241,10 +268,23 @@ const Auth = {
       alertModal.innerHTML = `
         <style>
           #globalAlertModal.modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
             background: rgba(15, 23, 42, 0.6);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             transition: all 0.3s ease;
+            z-index: 30000;
+          }
+          #globalAlertModal.modal-backdrop.show {
+            display: flex;
           }
           #globalAlertModal .modal-card {
             background: #ffffff;
@@ -330,8 +370,15 @@ const Auth = {
     alertModal.classList.add("show");
     
     if (window.Notification && Notification.permission === 'granted') {
-       const plainMsg = msgHtml.replace(/<[^>]+>/g, '\n');
-       new Notification(title, { body: plainMsg, icon: 'https://cdn-icons-png.flaticon.com/512/1827/1827370.png' });
+       try {
+         const plainMsg = msgHtml.replace(/<[^>]+>/g, '\n');
+         new Notification(title, { 
+           body: plainMsg, 
+           icon: 'https://cdn-icons-png.flaticon.com/512/1827/1827370.png',
+           tag: 'so-alert-' + Date.now(),
+           renotify: true
+         });
+       } catch(e) { console.error("Web Notification error:", e); }
     }
   },
 
@@ -340,95 +387,100 @@ const Auth = {
     // and only ask once per user session/browser instance to avoid annoying "every page" prompt
     if (window.Notification && Notification.permission === 'default') {
        const isLocalFile = window.location.protocol === 'file:';
-       const alreadyPrompted = localStorage.getItem('so_notification_prompted');
-       
-       if (!isLocalFile && !alreadyPrompted) {
-          Notification.requestPermission().then(() => {
-             localStorage.setItem('so_notification_prompted', 'true');
-          });
+       if (!isLocalFile) {
+          Notification.requestPermission();
        }
     }
 
-    let localLastPending = -1; // For Manager initial alert on page load
+    // For Manager/Admin alerts across page loads
+    let storageKey = 'so_last_pending_count_' + user.id;
+    let localLastPending = parseInt(localStorage.getItem(storageKey) || "-1");
     let lastSyncToken = "";    // For lightweight sync check
 
     const checkNotifications = async (isInitial = false) => {
       try {
-        // Step 1: Lightweight check. Does not count Logs.
+        // Step 1: Lightweight check
         const tokenResult = await API.getSyncToken();
         if (!tokenResult.success || !tokenResult.data) return;
         
         const currentToken = tokenResult.data.orders || "";
-        
-        // If same token, skip heavy fetch
         if (lastSyncToken && lastSyncToken === currentToken) {
-           return; 
+            return; 
         }
 
-        const isUpdate = !!lastSyncToken;
         lastSyncToken = currentToken;
 
-        // Step 2: Fetch full data only if changed or first run
+        // Step 2: Fetch full data
         const result = await API.getSaleOrders();
         if (!result.success) return;
         const orders = result.data || [];
         
-        // Removed logs
-        
-        if (user.role === 'Manager') {
+        // ── MANAGER / ADMIN / SUPER ADMIN NOTIFICATION ──
+        const role = (user.role || "").toLowerCase();
+        if (role === 'manager' || role === 'admin' || role === 'super admin') {
+           // Sync current state from storage to avoid multi-tab repeat
+           localLastPending = parseInt(localStorage.getItem(storageKey) || "-1");
+
            const newPendingCount = orders.filter(o => !o.Status || o.Status === 'Pending').length;
            
            if (localLastPending === -1) {
-              // First run on this page load
               if (newPendingCount > 0) {
                  Auth.showNotification('รายการรออนุมัติ', `คุณมีรายการรออนุมัติทั้งหมด <strong>${newPendingCount} รายการ</strong>`, '🔔');
               }
            } else if (newPendingCount > localLastPending) {
-              // New orders arrived while the page was open
               const diff = newPendingCount - localLastPending;
               Auth.showNotification('แจ้งเตือนงานเข้าใหม่', `มีรายการเข้ามาใหม่เพิ่ม <strong>${diff} รายการ</strong>`, '🚨');
            }
+           
            localLastPending = newPendingCount;
+           localStorage.setItem(storageKey, localLastPending);
 
-        } else if (user.role === 'User' || user.role === 'Salesperson') { 
-           // Strictly matching based on Creator ID
+        } else if (role === 'user' || role === 'salesperson') { 
            const myOrders = orders.filter(o => {
               const creatorId = String(o.Creator_ID || "").trim();
               return creatorId && creatorId === String(user.id);
            });
            
+           let knownStatusKey = 'so_known_statuses_' + user.id;
            let knownStatuses = {};
            try {
-             knownStatuses = JSON.parse(localStorage.getItem('so_known_statuses_' + user.id) || '{}');
+             knownStatuses = JSON.parse(localStorage.getItem(knownStatusKey) || '{}');
            } catch(e) {}
            
            let newlyApproved = 0;
            let newlyRejected = 0;
+           let newlyCreated = 0;
            let details = [];
 
            myOrders.forEach(o => {
               const prevStatus = knownStatuses[o.SO_Number];
               const currStatus = o.Status || 'Pending';
               
-              // Only notify if we knew about the order as Pending before, or if it's a first poll for a non-pending order
-              // but we prefer to avoid spam, so only transitions.
-              if (prevStatus && prevStatus === 'Pending' && currStatus !== 'Pending') {
-                 if (currStatus === 'Approved') {
-                    newlyApproved++;
-                    details.push(`✅ SO: ${o.SO_Number} <strong style="color:var(--success)">ได้รับการอนุมัติ</strong>`);
-                 } else if (currStatus === 'Rejected') {
-                    newlyRejected++;
-                    details.push(`❌ SO: ${o.SO_Number} <strong style="color:var(--danger)">ไม่ถูกอนุมัติ</strong>`);
+              if (prevStatus !== undefined) {
+                 if (prevStatus === 'Pending' && currStatus !== 'Pending') {
+                    if (currStatus === 'Approved') {
+                       newlyApproved++;
+                       details.push(`✅ SO: ${o.SO_Number} <strong style="color:var(--success)">ได้รับการอนุมัติ</strong>`);
+                    } else if (currStatus === 'Rejected') {
+                       newlyRejected++;
+                       details.push(`❌ SO: ${o.SO_Number} <strong style="color:var(--danger)">ไม่ถูกอนุมัติ</strong>`);
+                    }
                  }
+              } else {
+                 // Brand new order of mine
+                 newlyCreated++;
+                 details.push(`📝 สร้าง SO: ${o.SO_Number} สำเร็จ (รอตรวจสอบ)`);
               }
               knownStatuses[o.SO_Number] = currStatus;
            });
            
-           if (newlyApproved > 0 || newlyRejected > 0) {
-              Auth.showNotification('อัปเดตสถานะใบสั่งขาย', details.join('<br>'), (newlyRejected > 0 && newlyApproved === 0 ? '⚠️' : '🎉'));
+           if (newlyApproved > 0 || newlyRejected > 0 || newlyCreated > 0) {
+              const title = newlyCreated > 0 ? 'สร้างรายการใหม่เรียบร้อย' : 'อัปเดตสถานะใบสั่งขาย';
+              const icon = newlyCreated > 0 ? '📝' : (newlyRejected > 0 ? '⚠️' : '🎉');
+              Auth.showNotification(title, details.join('<br>'), icon);
            }
            
-           localStorage.setItem('so_known_statuses_' + user.id, JSON.stringify(knownStatuses));
+           localStorage.setItem(knownStatusKey, JSON.stringify(knownStatuses));
         }
 
         // Dispatch global event so active pages (like history.html) can sync data
