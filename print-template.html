@@ -3,8 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <base target="_top">
   <title>Sale Order Print - AEC Cosmetics Dentistry</title>
+  
+  <!-- PDF Capture Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
 
@@ -25,7 +31,6 @@
       background: white;
       box-shadow: 0 4px 20px rgba(0,0,0,.1);
       position: relative; /* Base for absolute footer */
-      overflow: hidden; /* Prevent bleed spillage */
     }
 
     /* ─── Multi-page Header & Footer via Table ─── */
@@ -224,7 +229,7 @@
       position: fixed;
       top: 20px;
       right: 20px;
-      z-index: 1000;
+      z-index: 9999;
       display: flex;
       gap: 10px;
     }
@@ -250,15 +255,16 @@
     @media (max-width: 768px) {
       .no-print {
         top: auto;
-        bottom: 0px;
-        left: 0;
-        right: 0;
-        background: rgba(255,255,255,0.9);
+        bottom: 20px; /* Raised for mobile browser toolbars */
+        left: 10px;
+        right: 10px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.95);
         backdrop-filter: blur(10px);
-        padding: 15px;
+        padding: 12px;
         justify-content: center;
-        box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
-        border-top: 1px solid #e2e8f0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        border: 1px solid #e2e8f0;
       }
       .btn {
         flex: 1;
@@ -317,7 +323,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 9999;
+      z-index: 10000;
       transition: opacity 0.3s;
     }
     .loading-text {
@@ -342,7 +348,8 @@
   </div>
 
   <div class="no-print">
-    <button class="btn btn-print" onclick="window.print()">🖨️ PDF</button>
+    <button class="btn btn-print" onclick="triggerPrint()">🖨️ PDF</button>
+    <button class="btn btn-capture" onclick="savePDFCapture()" style="background: #8b5cf6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">📸 Save PDF Capture</button>
     <button class="btn btn-excel" onclick="exportToExcel()">📊 Excel</button>
     <button class="btn btn-close" onclick="window.close()">✕ ปิด</button>
   </div>
@@ -487,7 +494,7 @@
     <div class="bottom-section" style="bottom: 25mm;">
       <div class="signature-area">
         <div class="sig-box">
-          <img src="image/tapum.png" class="seal" id="companySeal" alt="Seal" style="top: -35px; width: 110px; display: block !important; z-index: 0;">
+          <img src="image/tapum.png" class="seal hidden" id="companySeal" alt="Seal" style="top: -35px; width: 110px; z-index: 0;">
           <div id="approverSigContainer"></div>
           <div class="sig-line"></div>
           <div class="sig-label">ผู้อนุมัติ <span id="approverName">...................................................</span></div>
@@ -552,7 +559,7 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
       // Priority 1: Use hardcoded constants if available (avoiding all loading issues)
       if (typeof HEAD_B64 !== 'undefined' && selector === '.header-img') return HEAD_B64;
       if (typeof FOOT_B64 !== 'undefined' && selector === '.footer-img') return FOOT_B64;
-      if (typeof SEAL_B64 !== 'undefined' && (selector === '.seal-img' || selector === '#sealImg' || selector === '.seal')) return SEAL_B64;
+      if (typeof SEAL_B64 !== 'undefined' && (selector === '.seal-img' || selector === '#sealImg' || selector === '.seal' || selector === '#companySeal')) return SEAL_B64;
 
       const img = document.querySelector(selector);
       if (!img) return null;
@@ -744,10 +751,10 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
 
       const sigStartRow = condStartRow + 7;
       
-      // Embed Seal (only if visible in UI)
-      const sealEl = document.querySelector('.seal');
+      // Embed Seal (only if exists and not hidden)
+      const sealEl = document.getElementById('companySeal');
       if (sealEl && !sealEl.classList.contains('hidden')) {
-        const sealB64 = await imgToBase64('.seal');
+        const sealB64 = await imgToBase64('#companySeal');
         if (sealB64) {
           const sealImg = workbook.addImage({ base64: sealB64, extension: 'png' });
           sheet.addImage(sealImg, {
@@ -820,11 +827,69 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
       alert("ดาวน์โหลดไฟล์ Excel เรียบร้อยแล้วครับ");
     }
 
+    async function savePDFCapture() {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
+        const loadingText = overlay.querySelector('.loading-text');
+        if (loadingText) loadingText.textContent = 'กำลังสร้างไฟล์ PDF Capture...';
+      }
+
+      try {
+        // Delay slightly to ensure fonts/images are ready
+        await new Promise(r => setTimeout(r, 500));
+        
+        const container = document.querySelector('.print-container');
+        const soNum = document.getElementById('soFull').textContent || 'SaleOrder';
+
+        // Capture with high scale for clarity
+        const canvas = await html2canvas(container, {
+          scale: 3,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: container.scrollWidth,
+          windowHeight: container.scrollHeight
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        
+        // Initialize jsPDF (A4 is 210x297mm)
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        
+        // Add centered image fitting A4 width
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+        
+        pdf.save(`${soNum}_Capture.pdf`);
+      } catch (e) {
+        console.error("PDF Capture Error:", e);
+        alert("ขออภัย เกิดข้อผิดพลาดในการสร้าง PDF: " + e.message);
+      } finally {
+        if (overlay) {
+          overlay.style.opacity = '0';
+          setTimeout(() => {
+            overlay.style.display = 'none';
+            const loadingText = overlay.querySelector('.loading-text');
+            if (loadingText) loadingText.textContent = 'กำลังโหลดข้อมูล...';
+          }, 300);
+        }
+      }
+    }
+
     function triggerPrint() {
-      // Use setImmediate behavior or small timeout to ensure UI is ready
+      // Small vibration or tactile feedback if possible, or just a clearer response
+      const btn = document.querySelector('.btn-print');
+      if (btn) btn.style.transform = 'scale(0.95)';
+      
       setTimeout(() => {
+        if (btn) btn.style.transform = 'scale(1)';
         window.print();
-      }, 100);
+      }, 150);
     }
 
     function handleClose() {
@@ -840,6 +905,20 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
     }
 
     (async function init() {
+      // Set images to base64 immediately to avoid CORS/Tainted canvas issues
+      if (typeof HEAD_B64 !== 'undefined') {
+        const head = document.querySelector('.header-img');
+        if (head) head.src = 'data:image/png;base64,' + HEAD_B64;
+      }
+      if (typeof FOOT_B64 !== 'undefined') {
+        const foot = document.querySelector('.footer-img');
+        if (foot) foot.src = 'data:image/png;base64,' + FOOT_B64;
+      }
+      if (typeof SEAL_B64 !== 'undefined') {
+        const seal = document.getElementById('companySeal');
+        if (seal) seal.src = 'data:image/png;base64,' + SEAL_B64;
+      }
+
       const soNum = getUrlParam('so');
       const hideActions = getUrlParam('hide_actions');
       
@@ -997,10 +1076,10 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
             document.getElementById('approverPosition').textContent = 'ตำแหน่ง ' + (h.Approver_Position || '');
           }
           
-          // Show seal only if approved AND no digital signature (to avoid overlap)
+          // Show seal if approved
           const seal = document.getElementById('companySeal');
           if (seal) {
-            if (h.Approver_Name && !h.Approver_Signature) {
+            if (h.Approver_Name) {
               seal.classList.remove('hidden');
             } else {
               seal.classList.add('hidden');
