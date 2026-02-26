@@ -135,11 +135,19 @@ const Auth = {
           .btn-logout-cute:active {
             transform: translateY(0);
           }
+          @media (max-width: 768px) {
+            .btn-logout-cute { padding: 4px 10px !important; font-size: 11px !important; white-space: nowrap !important; width: 100%; justify-content: center; }
+            .logout-emoji { display: none !important; }
+            .auth-user-name { font-size: 11px !important; }
+            .auth-user-role { font-size: 9px !important; }
+            .auth-top-container { flex-direction: column; align-items: flex-end !important; gap: 6px !important; }
+            .auth-text-container { display: flex; align-items: center; gap: 8px; }
+          }
         </style>
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <div style="text-align: right; color: white;">
-            <div style="font-weight: 600; font-size: 14px;">👤 ${user.name}</div>
-            <div style="font-weight: 400; font-size: 12px; opacity: 0.85;">
+        <div class="auth-top-container" style="display: flex; align-items: center; gap: 16px;">
+          <div class="auth-text-container" style="text-align: right; color: white;">
+            <div class="auth-user-name" style="font-weight: 600; font-size: 14px;">👤 ${user.name}</div>
+            <div class="auth-user-role" style="font-weight: 400; font-size: 12px; opacity: 0.85;">
               ${user.role === 'Super Admin' ? '⚡ ผู้ดูแลระบบสูงสุด (Super Admin)' : 
                 (user.role === 'Admin' ? '🛡️ ผู้จัดการระบบ (Admin)' : 
                  (user.role === 'Manager' ? '💼 ผู้จัดการ (Manager)' : 
@@ -147,7 +155,7 @@ const Auth = {
             </div>
           </div>
           <button class="btn-logout-cute" onclick="Auth.confirmLogout()">
-            <span style="font-size: 15px;">👋</span> ออกจากระบบ
+            <span class="logout-emoji" style="font-size: 15px;">👋</span> ออกจากระบบ
           </button>
         </div>
       `;
@@ -386,13 +394,42 @@ const Auth = {
     }
   },
 
+  requestNotificationPermission: function() {
+    const modal = document.getElementById('notifPermModal');
+    if (modal) modal.classList.remove('show');
+    if (window.Notification) {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          Auth.showNotification('สำเร็จ', 'ระบบเปิดใช้งานการแจ้งเตือนแล้ว', '✅');
+        }
+      });
+    }
+  },
+
   startNotificationPolling: function(user) {
     // Only request permission if not on file:// protocol (which often doesn't persist)
-    // and only ask once per user session/browser instance to avoid annoying "every page" prompt
     if (window.Notification && Notification.permission === 'default') {
        const isLocalFile = window.location.protocol === 'file:';
        if (!isLocalFile) {
-          Notification.requestPermission();
+          if (!document.getElementById("notifPermModal") && sessionStorage.getItem("so_asked_notif") !== "true") {
+             sessionStorage.setItem("so_asked_notif", "true");
+             let permModal = document.createElement("div");
+             permModal.id = "notifPermModal";
+             permModal.className = "modal-backdrop show";
+             permModal.style.zIndex = "40000";
+             permModal.innerHTML = `
+               <div class="modal">
+                 <div class="modal-icon" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe); font-size: 40px;">🔔</div>
+                 <h3 style="margin-bottom: 8px;">เปิดการแจ้งเตือนระบบ</h3>
+                 <div class="modal-desc" style="margin-bottom: 24px;">กรุณาอนุญาตให้ระบบส่งการแจ้งเตือน เพื่อให้คุณไม่พลาดใบสั่งขายใหม่และการอัปเดตสถานะการอนุมัติ</div>
+                 <div class="modal-actions" style="display: flex; gap: 12px; justify-content: center;">
+                   <button class="btn btn-secondary" onclick="document.getElementById('notifPermModal').classList.remove('show')">ไว้ทีหลัง</button>
+                   <button class="btn btn-primary" onclick="Auth.requestNotificationPermission()">อนุญาตการแจ้งเตือน</button>
+                 </div>
+               </div>
+             `;
+             document.body.appendChild(permModal);
+          }
        }
     }
 
@@ -417,7 +454,7 @@ const Auth = {
         // Step 2: Fetch full data
         const result = await API.getSaleOrders();
         if (!result.success) return;
-        const orders = result.data || [];
+        const validOrders = (result.data || []).filter(o => o.SO_Number && String(o.SO_Number).trim() !== '');
         
         // ── MANAGER / ADMIN / SUPER ADMIN NOTIFICATION ──
         const role = (user.role || "").toLowerCase();
@@ -425,7 +462,7 @@ const Auth = {
            // Sync current state from storage to avoid multi-tab repeat
            localLastPending = parseInt(localStorage.getItem(storageKey) || "-1");
 
-           const newPendingCount = orders.filter(o => !o.Status || o.Status === 'Pending').length;
+           const newPendingCount = validOrders.filter(o => !o.Status || o.Status === 'Pending').length;
            
            if (localLastPending === -1) {
               if (newPendingCount > 0) {
@@ -440,7 +477,7 @@ const Auth = {
            localStorage.setItem(storageKey, localLastPending);
 
         } else if (role === 'user' || role === 'salesperson') { 
-           const myOrders = orders.filter(o => {
+           const myOrders = validOrders.filter(o => {
               const creatorId = String(o.Creator_ID || "").trim();
               return creatorId && creatorId === String(user.id);
            });
@@ -451,6 +488,8 @@ const Auth = {
              knownStatuses = JSON.parse(localStorage.getItem(knownStatusKey) || '{}');
            } catch(e) {}
            
+           let isFirstLoad = Object.keys(knownStatuses).length === 0;
+
            let newlyApproved = 0;
            let newlyRejected = 0;
            let newlyCreated = 0;
@@ -472,8 +511,10 @@ const Auth = {
                  }
               } else {
                  // Brand new order of mine
-                 newlyCreated++;
-                 details.push(`📝 สร้าง SO: ${o.SO_Number} สำเร็จ (รอตรวจสอบ)`);
+                 if (!isFirstLoad) {
+                    newlyCreated++;
+                    details.push(`📝 สร้าง SO: ${o.SO_Number} สำเร็จ (รอตรวจสอบ)`);
+                 }
               }
               knownStatuses[o.SO_Number] = currStatus;
            });
@@ -488,7 +529,7 @@ const Auth = {
         }
 
         // Dispatch global event so active pages (like history.html) can sync data
-        window.dispatchEvent(new CustomEvent('so_orders_updated', { detail: orders }));
+        window.dispatchEvent(new CustomEvent('so_orders_updated', { detail: validOrders }));
 
       } catch(e) { /* silent mode */ }
     };
@@ -506,4 +547,55 @@ document.addEventListener("DOMContentLoaded", () => {
     if(user) {
         Auth.renderUI(user);
     }
+
+    // --- Global Horizontal Swipe for Tables ---
+    let startX = null;
+    let startY = null;
+    let isSwiping = false;
+
+    document.addEventListener("touchstart", function(e) {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      isSwiping = false;
+    }, {passive: true});
+
+    document.addEventListener("touchmove", function(e) {
+      if (!startX || !startY) return;
+      
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.target.closest('.table-wrapper')) return; // Let native override handle it directly
+
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+      const diffX = startX - currentX;
+      const diffY = startY - currentY;
+
+      if (!isSwiping) {
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 8) {
+          isSwiping = true;
+        } else if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > 8) {
+          startX = null;
+          startY = null;
+          return;
+        }
+      }
+
+      if (isSwiping) {
+        let scrolled = false;
+        document.querySelectorAll(".table-wrapper").forEach(wrapper => {
+           if (wrapper.scrollWidth > wrapper.clientWidth) {
+              wrapper.scrollLeft += diffX;
+              scrolled = true;
+           }
+        });
+        
+        if (scrolled && e.cancelable) {
+           e.preventDefault(); 
+        }
+        
+        startX = currentX;
+        startY = currentY;
+      }
+    }, {passive: false});
 });

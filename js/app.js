@@ -356,8 +356,8 @@ function addProductRow() {
     '<td class="col-unit"><select class="unit" onchange="calculateRowTotal(this)">' +
     unitOptions +
     "</select></td>" +
-    '<td class="col-price"><input type="number" class="unit-price" value="0" step="0.01" oninput="calculateRowTotal(this)"></td>' +
-    '<td class="col-disc"><input type="number" class="discount" value="0" step="0.01" oninput="calculateRowTotal(this)"></td>' +
+    '<td class="col-price"><input type="number" class="unit-price" value="0" step="0.01" onfocus="if(this.value===\'0\')this.value=\'\'" onblur="if(this.value===\'\')this.value=\'0\'" oninput="calculateRowTotal(this)"></td>' +
+    '<td class="col-disc"><input type="number" class="discount" value="0" step="0.01" onfocus="if(this.value===\'0\')this.value=\'\'" onblur="if(this.value===\'\')this.value=\'0\'" oninput="calculateRowTotal(this)"></td>' +
     '<td class="col-total"><span class="total-display">0.00</span></td>' +
     '<td class="col-remark"><textarea class="item-remark" placeholder="หมายเหตุ" rows="1"></textarea></td>' +
     '<td class="col-action"><button class="btn-delete" type="button" onclick="removeProductRow(this)" title="ลบรายการ">🗑</button></td>';
