@@ -2,8 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <base target="_top">
   <title>Sale Order Print - AEC Cosmetics Dentistry</title>
   
@@ -189,13 +188,9 @@
     }
     .sig-line {
       width: 220px;
-      height: 1px;
       margin: 35px auto 5px;
       position: relative;
-      background-image: radial-gradient(circle, #000 1px, transparent 1.5px);
-      background-position: bottom;
-      background-size: 5px 1px;
-      background-repeat: repeat-x;
+      border-bottom: 1px dashed #000;
     }
     .sig-label { font-weight: 600; margin-bottom: 5px; }
 
@@ -272,9 +267,10 @@
         font-size: 14px;
       }
       .print-container {
-        margin: 0 auto 80px auto; /* Add space for bottom buttons */
-        width: 100%;
+        margin: 0 auto 80px auto; 
+        width: 210mm; /* Fixed width to allow zooming without distortion */
         box-shadow: none;
+        overflow-x: auto; /* Allow scrolling if screen is too narrow */
       }
     }
 
@@ -882,14 +878,8 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
     }
 
     function triggerPrint() {
-      // Small vibration or tactile feedback if possible, or just a clearer response
-      const btn = document.querySelector('.btn-print');
-      if (btn) btn.style.transform = 'scale(0.95)';
-      
-      setTimeout(() => {
-        if (btn) btn.style.transform = 'scale(1)';
-        window.print();
-      }, 150);
+      // Direct call to window.print() for best mobile responsiveness
+      window.print();
     }
 
     function handleClose() {
