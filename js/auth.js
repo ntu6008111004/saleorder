@@ -459,22 +459,48 @@ const Auth = {
         // ── MANAGER / ADMIN / SUPER ADMIN NOTIFICATION ──
         const role = (user.role || "").toLowerCase();
         if (role === 'manager' || role === 'admin' || role === 'super admin') {
-           // Sync current state from storage to avoid multi-tab repeat
-           localLastPending = parseInt(localStorage.getItem(storageKey) || "-1");
-
-           const newPendingCount = validOrders.filter(o => !o.Status || o.Status === 'Pending').length;
+           let knownStatusKey = 'so_known_statuses_mgr_' + user.id;
+           let knownStatuses = {};
+           try {
+             knownStatuses = JSON.parse(localStorage.getItem(knownStatusKey) || '{}');
+           } catch(e) {}
            
-           if (localLastPending === -1) {
-              if (newPendingCount > 0) {
-                 Auth.showNotification('รายการรออนุมัติ', `คุณมีรายการรออนุมัติทั้งหมด <strong>${newPendingCount} รายการ</strong>`, '🔔');
+           let isFirstLoad = Object.keys(knownStatuses).length === 0;
+           let newlyCreated = 0;
+           let newlyUpdated = 0;
+           let pendingCount = 0;
+           let details = [];
+
+           validOrders.forEach(o => {
+              const prevStatus = knownStatuses[o.SO_Number];
+              const currStatus = o.Status || 'Pending';
+              
+              if (currStatus === 'Pending') pendingCount++;
+
+              if (prevStatus !== undefined) {
+                 if (prevStatus !== currStatus && currStatus !== 'Pending') {
+                    newlyUpdated++;
+                    details.push(`🔄 SO: ${o.SO_Number} เปลี่ยนเป็น <strong style="color:var(--primary)">${currStatus === 'Approved' ? 'อนุมัติ' : 'ไม่อนุมัติ'}</strong>`);
+                 }
+              } else {
+                 if (!isFirstLoad && currStatus === 'Pending') {
+                    newlyCreated++;
+                    details.push(`🚨 งานใหม่ SO: ${o.SO_Number} (รออนุมัติ)`);
+                 }
               }
-           } else if (newPendingCount > localLastPending) {
-              const diff = newPendingCount - localLastPending;
-              Auth.showNotification('แจ้งเตือนงานเข้าใหม่', `มีรายการเข้ามาใหม่เพิ่ม <strong>${diff} รายการ</strong>`, '🚨');
+              knownStatuses[o.SO_Number] = currStatus;
+           });
+           
+           if (newlyCreated > 0 || newlyUpdated > 0) {
+              const title = newlyCreated > 0 ? 'มีรายการรออนุมัติเข้ามาใหม่' : 'มีการอัปเดตสถานะเอกสาร';
+              const icon = newlyCreated > 0 ? '🚨' : '🔄';
+              Auth.showNotification(title, details.join('<br>'), icon);
+           } else if (isFirstLoad && pendingCount > 0) {
+              // Only on very first load ever on this device
+              Auth.showNotification('รายการรออนุมัติ', `คุณมีรายการรออนุมัติทั้งหมด <strong>${pendingCount} รายการ</strong>`, '🔔');
            }
            
-           localLastPending = newPendingCount;
-           localStorage.setItem(storageKey, localLastPending);
+           localStorage.setItem(knownStatusKey, JSON.stringify(knownStatuses));
 
         } else if (role === 'user' || role === 'salesperson') { 
            const myOrders = validOrders.filter(o => {
