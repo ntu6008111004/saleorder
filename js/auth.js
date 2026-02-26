@@ -477,27 +477,22 @@ const Auth = {
               
               if (currStatus === 'Pending') pendingCount++;
 
-              if (prevStatus !== undefined) {
-                 if (prevStatus !== currStatus && currStatus !== 'Pending') {
-                    newlyUpdated++;
-                    details.push(`🔄 SO: ${o.SO_Number} เปลี่ยนเป็น <strong style="color:var(--primary)">${currStatus === 'Approved' ? 'อนุมัติ' : 'ไม่อนุมัติ'}</strong>`);
-                 }
-              } else {
+              if (prevStatus === undefined) {
                  if (!isFirstLoad && currStatus === 'Pending') {
                     newlyCreated++;
-                    details.push(`🚨 งานใหม่ SO: ${o.SO_Number} (รออนุมัติ)`);
                  }
               }
               knownStatuses[o.SO_Number] = currStatus;
            });
            
-           if (newlyCreated > 0 || newlyUpdated > 0) {
-              const title = newlyCreated > 0 ? 'มีรายการรออนุมัติเข้ามาใหม่' : 'มีการอัปเดตสถานะเอกสาร';
-              const icon = newlyCreated > 0 ? '🚨' : '🔄';
+           if (newlyCreated > 0) {
+              const title = 'มีรายการรออนุมัติเข้ามาใหม่';
+              const icon = '🚨';
+              details.push(`มีงานขออนุมัติใหม่เข้ามาเพิ่ม: <strong>${newlyCreated} รายการ</strong><br>รวมยอดค้างอนุมัติทั้งหมด: <strong>${pendingCount} รายการ</strong>`);
               Auth.showNotification(title, details.join('<br>'), icon);
            } else if (isFirstLoad && pendingCount > 0) {
               // Only on very first load ever on this device
-              Auth.showNotification('รายการรออนุมัติ', `คุณมีรายการรออนุมัติทั้งหมด <strong>${pendingCount} รายการ</strong>`, '🔔');
+              Auth.showNotification('รายการรออนุมัติ', `คุณมีรายการค้างอนุมัติทั้งหมด: <strong>${pendingCount} รายการ</strong>`, '🔔');
            }
            
            localStorage.setItem(knownStatusKey, JSON.stringify(knownStatuses));

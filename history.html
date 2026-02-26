@@ -556,6 +556,11 @@
               renderTable();
               // Show success notification
               Auth.showNotification('สำเร็จ', `ทำรายการ ${actionText} ใบสั่งขาย ${so} เรียบร้อยแล้ว`, '🎉');
+              
+              // Force reload to ensure fresh data and avoid delayed updates
+              setTimeout(() => {
+                window.location.reload();
+              }, 1500);
             } else {
               Auth.showNotification('เกิดข้อผิดพลาด', res.message || res.error, '❌');
             }

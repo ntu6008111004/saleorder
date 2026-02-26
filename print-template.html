@@ -15,7 +15,6 @@
       color: #1e293b;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
-      color-adjust: exact !important;
     }
 
     .print-container {
@@ -247,21 +246,23 @@
       html, body { 
         margin: 0 !important; 
         padding: 0 !important; 
-        width: 210mm !important;
+        background: white !important;
       }
       .print-container { 
         margin: 0 !important; 
+        padding: 0 !important;
         box-shadow: none !important; 
-        width: 210mm !important; 
-        min-width: 210mm !important;
-        height: 297mm !important; 
+        width: 100% !important; 
+        height: 297mm !important; /* Fixed A4 Height */
+        min-height: 297mm !important;
         position: relative !important;
+        border: none !important;
       }
-      .no-print { display: none; }
+      .no-print { display: none !important; }
       .system-footer { display: none !important; }
       @page {
         size: A4;
-        margin: 0; /* Critical for full-bleed */
+        margin: 0 !important; /* Critical to hide browser headers/footers */
       }
     }
     
@@ -456,7 +457,7 @@
     <div class="bottom-section" style="bottom: 25mm;">
       <div class="signature-area">
         <div class="sig-box">
-          <img src="image/tapum.jpg" class="seal hidden" id="companySeal" alt="Seal">
+          <img src="image/tapum.png" class="seal" id="companySeal" alt="Seal" style="top: -30px; width: 110px; display: block !important; z-index: 0;">
           <div id="approverSigContainer"></div>
           <div class="sig-line"></div>
           <div class="sig-label">ผู้อนุมัติ <span id="approverName">...................................................</span></div>
