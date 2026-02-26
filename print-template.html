@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <base target="_top">
   <title>Sale Order Print - AEC Cosmetics Dentistry</title>
   <style>
@@ -236,11 +237,40 @@
       box-shadow: 0 2px 10px rgba(0,0,0,.1);
       display: flex;
       align-items: center;
+      justify-content: center;
+      white-space: nowrap;
       gap: 6px;
+      -webkit-tap-highlight-color: transparent;
     }
     .btn-print { background: #2563eb; color: white; }
     .btn-excel { background: #16a34a; color: white; }
     .btn-close { background: #e2e8f0; color: #475569; }
+
+    /* Mobile adjustments for Action Buttons */
+    @media (max-width: 768px) {
+      .no-print {
+        top: auto;
+        bottom: 0px;
+        left: 0;
+        right: 0;
+        background: rgba(255,255,255,0.9);
+        backdrop-filter: blur(10px);
+        padding: 15px;
+        justify-content: center;
+        box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+        border-top: 1px solid #e2e8f0;
+      }
+      .btn {
+        flex: 1;
+        padding: 12px 10px;
+        font-size: 14px;
+      }
+      .print-container {
+        margin: 0 auto 80px auto; /* Add space for bottom buttons */
+        width: 100%;
+        box-shadow: none;
+      }
+    }
 
     @media print {
       html, body { 
@@ -312,7 +342,7 @@
   </div>
 
   <div class="no-print">
-    <button class="btn btn-print" onclick="window.print()">🖨️ พิมพ์</button>
+    <button class="btn btn-print" onclick="window.print()">🖨️ PDF</button>
     <button class="btn btn-excel" onclick="exportToExcel()">📊 Excel</button>
     <button class="btn btn-close" onclick="window.close()">✕ ปิด</button>
   </div>
@@ -788,6 +818,25 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
       const buffer = await workbook.xlsx.writeBuffer();
       saveAs(new Blob([buffer]), `${soNum}.xlsx`);
       alert("ดาวน์โหลดไฟล์ Excel เรียบร้อยแล้วครับ");
+    }
+
+    function triggerPrint() {
+      // Use setImmediate behavior or small timeout to ensure UI is ready
+      setTimeout(() => {
+        window.print();
+      }, 100);
+    }
+
+    function handleClose() {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.close();
+        // Fallback for mobile if window.close() is blocked
+        setTimeout(() => {
+          window.location.href = 'history.html';
+        }, 100);
+      }
     }
 
     (async function init() {
