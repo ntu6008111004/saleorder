@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <base target="_top">
+  <link rel="icon" type="image/png" href="image/logo.png">
+  <link rel="apple-touch-icon" href="image/logo.png">
+  <link rel="manifest" href="manifest.json">
   <title>Sale Order Print - AEC Cosmetics Dentistry</title>
   
   <!-- PDF Capture Libraries -->
@@ -246,6 +249,13 @@
     .btn-excel { background: #16a34a; color: white; }
     .btn-close { background: #e2e8f0; color: #475569; }
 
+    .btn:disabled {
+      background: #94a3b8 !important;
+      cursor: not-allowed;
+      opacity: 0.7;
+      box-shadow: none;
+    }
+
     /* Mobile adjustments for Action Buttons */
     @media (max-width: 768px) {
       .no-print {
@@ -345,9 +355,9 @@
 
   <div class="no-print">
     <!-- <button class="btn btn-print" onclick="triggerPrint()">🖨️ PDF</button> -->
-    <button class="btn btn-capture" onclick="savePDFCapture()" style="background: #8b5cf6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">📸PDF</button>
-    <button class="btn btn-excel" onclick="exportToExcel()">📊 Excel</button>
-    <button class="btn btn-close" onclick="window.close()">✕ ปิด</button>
+    <button id="btnCapture" class="btn btn-capture" onclick="savePDFCapture()" style="background: #8b5cf6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" disabled>📸PDF</button>
+    <button id="btnExcel" class="btn btn-excel" onclick="exportToExcel()" disabled>📊 Excel</button>
+    <button id="btnClose" class="btn btn-close" onclick="window.close()">✕ ปิด</button>
   </div>
 
   <div class="print-container">
@@ -829,19 +839,19 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
         overlay.style.display = 'flex';
         overlay.style.opacity = '1';
         const loadingText = overlay.querySelector('.loading-text');
-        if (loadingText) loadingText.textContent = 'กำลังสร้างไฟล์ PDF Capture...';
+        if (loadingText) loadingText.textContent = 'กำลังรวบรวมข้อมูลออกรายงาน...';
       }
 
       try {
-        // Delay slightly to ensure fonts/images are ready
-        await new Promise(r => setTimeout(r, 500));
+        // ให้เวลา Overlay แสดงผล
+        await new Promise(r => setTimeout(r, 300));
         
         const container = document.querySelector('.print-container');
-        const soNum = document.getElementById('soFull').textContent || 'SaleOrder';
+        const soNum = (document.getElementById('soFull').textContent || 'SaleOrder').trim();
 
-        // Capture with high scale for clarity
+        // Capture
         const canvas = await html2canvas(container, {
-          scale: 3,
+          scale: 2, // ปรับเป็น 2 เพื่อไม่ให้ไฟล์ใหญ่เกินไปสำหรับส่งแชร์บนมือถือ
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
@@ -851,17 +861,35 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
 
         const imgData = canvas.toDataURL('image/png');
         
-        // Initialize jsPDF (A4 is 210x297mm)
+        // Initialize jsPDF
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
-        
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         
-        // Add centered image fitting A4 width
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
         
-        pdf.save(`${soNum}_Capture.pdf`);
+        const fileName = `${soNum}_Capture.pdf`;
+
+        // ตรวจสอบว่าเป็นมือถือและรองรับ Native Share หรือไม่
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile && navigator.share && navigator.canShare) {
+          const pdfBlob = pdf.output('blob');
+          const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+          
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'Sale Order',
+              text: fileName
+            });
+            return; // จบการทำงานถ้าแชร์สำเร็จ
+          }
+        }
+
+        // ถ้าไม่ใช่ระบบแชร์ หรือแชร์ไม่ได้ ให้ดาวน์โหลดปกติ
+        pdf.save(fileName);
+        
       } catch (e) {
         console.error("PDF Capture Error:", e);
         alert("ขออภัย เกิดข้อผิดพลาดในการสร้าง PDF: " + e.message);
@@ -1081,6 +1109,10 @@ const SEAL_B64 = '/9j/4AAQSkZJRgABAQAASABIAAD/4QBYRXhpZgAATU0AKgAAAAgAAgESAAMAAA
           } else {
             document.getElementById('currentDateBE1').textContent = '';
           }
+
+          // Enable buttons after everything is rendered
+          document.getElementById('btnCapture').disabled = false;
+          document.getElementById('btnExcel').disabled = false;
         }
       } catch (e) {
         console.error(e);
