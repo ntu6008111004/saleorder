@@ -384,12 +384,25 @@ const Auth = {
     if (window.Notification && Notification.permission === 'granted') {
        try {
          const plainMsg = msgHtml.replace(/<[^>]+>/g, '\n');
-         new Notification(title, { 
-           body: plainMsg, 
-           icon: 'https://cdn-icons-png.flaticon.com/512/1827/1827370.png',
+         const notificationOptions = {
+           body: plainMsg,
+           icon: './image/logo.png', // Corrected path relative to actual root
            tag: 'so-alert-' + Date.now(),
-           renotify: true
-         });
+           renotify: true,
+           badge: './image/logo.png',
+           vibrate: [200, 100, 200]
+         };
+
+         // Attempt to use Service Worker first (Better for PWA/OS)
+         if ('serviceWorker' in navigator) {
+           navigator.serviceWorker.ready.then(reg => {
+             reg.showNotification(title, notificationOptions);
+           }).catch(() => {
+             new Notification(title, notificationOptions);
+           });
+         } else {
+           new Notification(title, notificationOptions);
+         }
        } catch(e) { console.error("Web Notification error:", e); }
     }
   },
@@ -412,7 +425,6 @@ const Auth = {
        const isLocalFile = window.location.protocol === 'file:';
        if (!isLocalFile) {
           if (!document.getElementById("notifPermModal") && sessionStorage.getItem("so_asked_notif") !== "true") {
-             sessionStorage.setItem("so_asked_notif", "true");
              let permModal = document.createElement("div");
              permModal.id = "notifPermModal";
              permModal.className = "modal-backdrop show";
@@ -423,7 +435,7 @@ const Auth = {
                  <h3 style="margin-bottom: 8px;">เปิดการแจ้งเตือนระบบ</h3>
                  <div class="modal-desc" style="margin-bottom: 24px;">กรุณาอนุญาตให้ระบบส่งการแจ้งเตือน เพื่อให้คุณไม่พลาดใบสั่งขายใหม่และการอัปเดตสถานะการอนุมัติ</div>
                  <div class="modal-actions" style="display: flex; gap: 12px; justify-content: center;">
-                   <button class="btn btn-secondary" onclick="document.getElementById('notifPermModal').classList.remove('show')">ไว้ทีหลัง</button>
+                   <button class="btn btn-secondary" onclick="sessionStorage.setItem('so_asked_notif', 'true'); document.getElementById('notifPermModal').classList.remove('show')">ไว้ทีหลัง</button>
                    <button class="btn btn-primary" onclick="Auth.requestNotificationPermission()">อนุญาตการแจ้งเตือน</button>
                  </div>
                </div>
@@ -564,6 +576,15 @@ const Auth = {
 
 // Check on every page load
 document.addEventListener("DOMContentLoaded", () => {
+    // --- Service Worker Registration ---
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+            console.log('SW Registered', reg);
+        }).catch(err => {
+            console.log('SW Registration Failed', err);
+        });
+    }
+
     const user = Auth.checkAuth();
     if(user) {
         Auth.renderUI(user);
